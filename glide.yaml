@@ -1,12 +1,25 @@
 package: github.com/tendermint/tmlibs
 import:
+- package: github.com/go-kit/kit
+  subpackages:
+  - log
+  - log/level
+  - log/term
+- package: github.com/go-logfmt/logfmt
 - package: github.com/jmhodges/levigo
+- package: github.com/pkg/errors
+- package: github.com/spf13/cobra
+- package: github.com/spf13/viper
 - package: github.com/syndtr/goleveldb
   subpackages:
   - leveldb
   - leveldb/errors
   - leveldb/opt
 - package: github.com/tendermint/go-wire
+  version: develop
+  subpackages:
+  - data
+  - data/base58
 - package: github.com/tendermint/log15
 - package: golang.org/x/crypto
   subpackages:
@@ -15,3 +28,4 @@ testImport:
 - package: github.com/stretchr/testify
   subpackages:
   - assert
+  - require
