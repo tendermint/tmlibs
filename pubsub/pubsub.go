@@ -247,7 +247,7 @@ func appendIfMissing(slice []string, i string) []string {
 func match(patterns map[string]map[string]struct{}, channel string) (pattern string, ok bool) {
 	for pattern := range patterns {
 		// TODO: is filepath ok? If not we must replace it with something else
-		if matched, _ := filepath.Match(pattern, channel); matched {
+		if matched, err := filepath.Match(pattern, channel); err == nil && matched {
 			return pattern, true
 		}
 	}
