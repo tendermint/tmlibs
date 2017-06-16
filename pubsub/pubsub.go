@@ -92,8 +92,6 @@ func (s *Server) Start() {
 
 loop:
 	for cmd := range s.cmds {
-		sentTo := make(map[string]bool)
-
 		if cmd.channels == nil && cmd.patterns == nil {
 			switch cmd.op {
 			case unsubAll:
@@ -109,7 +107,7 @@ loop:
 			case sub:
 				state.add(channel, false, cmd.client)
 			case pub:
-				state.send(channel, cmd.msg, cmd.msgType, sentTo)
+				state.send(channel, cmd.msg, cmd.msgType)
 			case unsub:
 				state.remove(channel, false, cmd.client)
 			}
@@ -151,13 +149,9 @@ func (state *state) add(s string, isPattern bool, c *Client) {
 	}
 }
 
-func (state *state) send(channel string, msg interface{}, msgType interface{}, sentTo map[string]bool) {
+func (state *state) send(channel string, msg interface{}, msgType interface{}) {
 	for clientID := range state.channels[channel] {
-		if sentTo[clientID] {
-			continue
-		}
 		if state.clients[clientID].MsgType == nil || state.clients[clientID].MsgType == msgType {
-			sentTo[clientID] = true
 			state.clients[clientID].Callback(msg)
 		}
 	}
@@ -165,11 +159,7 @@ func (state *state) send(channel string, msg interface{}, msgType interface{}, s
 	pattern, ok := match(state.patterns, channel)
 	if ok {
 		for clientID := range state.patterns[pattern] {
-			if sentTo[clientID] {
-				continue
-			}
 			if state.clients[clientID].MsgType == nil || state.clients[clientID].MsgType == msgType {
-				sentTo[clientID] = true
 				state.clients[clientID].Callback(msg)
 			}
 		}

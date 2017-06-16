@@ -30,11 +30,6 @@ func TestSubscribe(t *testing.T) {
 	assert.Equal(t, "Tombstone", <-received)
 	assert.Zero(t, len(received))
 
-	// client gets its message only once per Publish
-	s.Publish("Unicorn", "NewBlock", "abci", "abci.Account")
-	assert.Equal(t, "Unicorn", <-received)
-	assert.Zero(t, len(received))
-
 	// if nobody is subscribed to the channel, nothing happens
 	s.Publish("Cypher", "NewBlock", "unknown")
 	select {
@@ -86,7 +81,7 @@ func TestSubscribePatterns(t *testing.T) {
 
 	s.SubscribePatterns(c, "abci.Invoices.*")
 
-	s.Publish("Tombstone", "NewBlock", "abci.Invoices.Ivan", "abci.Invoices.Ivan.22")
+	s.Publish("Tombstone", "NewBlock", "abci.Invoices.Ivan.22")
 	assert.Equal(t, "Tombstone", <-received)
 	assert.Zero(t, len(received))
 }
@@ -129,13 +124,13 @@ func TestUnsubscribePatterns(t *testing.T) {
 
 	s.SubscribePatterns(c, "abci.Invoices.*")
 
-	s.Publish("Tombstone", "NewBlock", "abci.Invoices.Ivan", "abci.Invoices.Ivan.22")
+	s.Publish("Tombstone", "NewBlock", "abci.Invoices.Ivan.22")
 	assert.Equal(t, "Tombstone", <-received)
 	assert.Zero(t, len(received))
 
 	s.UnsubscribePatterns(c, "abci.Invoices.*")
 
-	s.Publish("Toad Men", "NewBlock", "abci.Invoices.Ivan", "abci.Invoices.Ivan.22")
+	s.Publish("Toad Men", "NewBlock", "abci.Invoices.Ivan.22")
 	assert.Zero(t, len(received))
 }
 
@@ -154,7 +149,7 @@ func TestUnsubscribeAll(t *testing.T) {
 	s.Subscribe(c, "abci")
 	s.SubscribePatterns(c, "abci.Invoices.*")
 
-	s.Publish("Tombstone", "NewBlock", "abci.Invoices.Ivan", "abci.Invoices.Ivan.22")
+	s.Publish("Tombstone", "NewBlock", "abci.Invoices.Ivan.22")
 	assert.Equal(t, "Tombstone", <-received)
 	assert.Zero(t, len(received))
 
