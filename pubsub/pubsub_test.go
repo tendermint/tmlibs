@@ -1,6 +1,7 @@
 package pubsub_test
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -163,4 +164,42 @@ func TestUnsubscribeAll(t *testing.T) {
 	assert.Zero(t, len(received))
 	s.Publish("Toad Men", "NewBlock", "abci.Invoices.Ivan", "abci.Invoices.Ivan.22")
 	assert.Zero(t, len(received))
+}
+
+func Benchmark10Clients(b *testing.B)   { benchmarkNClients(10, b) }
+func Benchmark100Clients(b *testing.B)  { benchmarkNClients(100, b) }
+func Benchmark1000Clients(b *testing.B) { benchmarkNClients(1000, b) }
+
+func benchmarkNClients(n int, b *testing.B) {
+	s := pubsub.NewServer(1)
+	go s.Start()
+	defer s.Stop()
+
+	for i := 0; i < n; i++ {
+		c := &pubsub.Client{ID: fmt.Sprintf("#%d", i), Callback: func(msg interface{}) {}}
+		s.Subscribe(c, "abci", "abci.Account", "abci.Invoices")
+	}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		s.Publish("Gamora", "NewBlock", "abci", "abci.Account", "abci.Invoices")
+	}
+}
+
+func Benchmark100ClientsUsingPatterns(b *testing.B) {
+	s := pubsub.NewServer(1)
+	go s.Start()
+	defer s.Stop()
+
+	for i := 0; i < 100; i++ {
+		c := &pubsub.Client{ID: fmt.Sprintf("#%d", i), Callback: func(msg interface{}) {}}
+		s.SubscribePatterns(c, "abci.Invoices.*")
+	}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		s.Publish("Hydro-Man", "NewBlock", "abci.Account", "abci.Invoices.Ivan")
+	}
 }
