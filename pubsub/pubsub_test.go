@@ -67,7 +67,7 @@ func TestClientWithMsgTypeReceivesOnlyEventsOfThatType(t *testing.T) {
 	assert.Zero(t, len(received))
 }
 
-func TestSubscribePatterns(t *testing.T) {
+func TestPSubscribe(t *testing.T) {
 	t.Parallel()
 
 	received := make(chan interface{}, 10)
@@ -79,7 +79,7 @@ func TestSubscribePatterns(t *testing.T) {
 	go s.Start()
 	defer s.Stop()
 
-	s.SubscribePatterns(c, "abci.Invoices.*")
+	s.PSubscribe(c, "abci.Invoices.*")
 
 	s.Publish("Tombstone", "NewBlock", "abci.Invoices.Ivan.22")
 	assert.Equal(t, "Tombstone", <-received)
@@ -110,7 +110,7 @@ func TestUnsubscribe(t *testing.T) {
 	assert.Zero(t, len(received))
 }
 
-func TestUnsubscribePatterns(t *testing.T) {
+func TestPUnsubscribe(t *testing.T) {
 	t.Parallel()
 
 	received := make(chan interface{}, 10)
@@ -122,13 +122,13 @@ func TestUnsubscribePatterns(t *testing.T) {
 	go s.Start()
 	defer s.Stop()
 
-	s.SubscribePatterns(c, "abci.Invoices.*")
+	s.PSubscribe(c, "abci.Invoices.*")
 
 	s.Publish("Tombstone", "NewBlock", "abci.Invoices.Ivan.22")
 	assert.Equal(t, "Tombstone", <-received)
 	assert.Zero(t, len(received))
 
-	s.UnsubscribePatterns(c, "abci.Invoices.*")
+	s.PUnsubscribe(c, "abci.Invoices.*")
 
 	s.Publish("Toad Men", "NewBlock", "abci.Invoices.Ivan.22")
 	assert.Zero(t, len(received))
@@ -147,7 +147,7 @@ func TestUnsubscribeAll(t *testing.T) {
 	defer s.Stop()
 
 	s.Subscribe(c, "abci")
-	s.SubscribePatterns(c, "abci.Invoices.*")
+	s.PSubscribe(c, "abci.Invoices.*")
 
 	s.Publish("Tombstone", "NewBlock", "abci.Invoices.Ivan.22")
 	assert.Equal(t, "Tombstone", <-received)
@@ -189,7 +189,7 @@ func Benchmark100ClientsUsingPatterns(b *testing.B) {
 
 	for i := 0; i < 100; i++ {
 		c := &pubsub.Client{ID: fmt.Sprintf("#%d", i), Callback: func(msg interface{}) {}}
-		s.SubscribePatterns(c, "abci.Invoices.*")
+		s.PSubscribe(c, "abci.Invoices.*")
 	}
 
 	b.ReportAllocs()

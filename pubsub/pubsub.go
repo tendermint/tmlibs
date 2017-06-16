@@ -48,8 +48,8 @@ func (s *Server) Subscribe(c *Client, channels ...string) {
 	s.cmds <- cmd{op: sub, channels: channels, client: c}
 }
 
-// SubscribePatterns client to patterns.
-func (s *Server) SubscribePatterns(c *Client, patterns ...string) {
+// PSubscribe client to patterns.
+func (s *Server) PSubscribe(c *Client, patterns ...string) {
 	s.cmds <- cmd{op: sub, patterns: patterns, client: c}
 }
 
@@ -60,8 +60,8 @@ func (s *Server) Unsubscribe(c *Client, channels ...string) {
 	}
 }
 
-// UnsubscribePatterns client from patterns.
-func (s *Server) UnsubscribePatterns(c *Client, patterns ...string) {
+// PUnsubscribe client from patterns.
+func (s *Server) PUnsubscribe(c *Client, patterns ...string) {
 	if len(patterns) > 0 {
 		s.cmds <- cmd{op: unsub, patterns: patterns, client: c}
 	}
