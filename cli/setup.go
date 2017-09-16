@@ -18,6 +18,7 @@ const (
 	HomeFlag     = "home"
 	TraceFlag    = "trace"
 	OutputFlag   = "output"
+	VerifyFlag   = "verify"
 	EncodingFlag = "encoding"
 )
 
@@ -37,6 +38,7 @@ func PrepareBaseCmd(cmd *cobra.Command, envPrefix, defautRoot string) Executor {
 	// to --root / TM_ROOT / TMROOT
 	cmd.PersistentFlags().String(HomeFlag, "", "root directory for config and data")
 	cmd.PersistentFlags().Bool(TraceFlag, false, "print out full stack trace on errors")
+	cmd.PersistentFlags().Bool(VerifyFlag, false, "if set, verifies that all the fields in the config file match up with the fields of the struct being unmarshaled and keyed by the `mapstructure` tag")
 	cmd.PersistentPreRunE = concatCobraCmdFuncs(bindFlagsLoadViper, cmd.PersistentPreRunE)
 	return Executor{cmd, os.Exit}
 }
