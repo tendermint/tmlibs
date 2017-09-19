@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0 (TBA)
+
+BREAKING CHANGES:
+
+- [log] logger functions no longer returns an error
+
 ## 0.3.0 (August 25, 2017)
 
 BREAKING CHANGES:
@@ -7,12 +13,12 @@ BREAKING CHANGES:
 - [common] NewBaseService takes the new logger
 - [cli] RunCaptureWithArgs now captures stderr and stdout
   - +func RunCaptureWithArgs(cmd Executable, args []string, env map[string]string) (stdout, stderr string, err error)
-  - -func RunCaptureWithArgs(cmd Executable, args []string, env map[string]string) (output string, err error) 
+  - -func RunCaptureWithArgs(cmd Executable, args []string, env map[string]string) (output string, err error)
 
 FEATURES:
 
 - [common] various common HTTP functionality
-- [common] Date range parsing from string (ex. "2015-12-31:2017-12-31") 
+- [common] Date range parsing from string (ex. "2015-12-31:2017-12-31")
 - [pubsub] New package for publish-subscribe with more advanced filtering
 
 BUG FIXES:
@@ -30,7 +36,7 @@ FEATURES:
 IMPROVEMENTS:
 
 - [cli] Error handling for tests
-- [cli] Support dashes in ENV variables 
+- [cli] Support dashes in ENV variables
 
 BUG FIXES:
 
