@@ -35,6 +35,7 @@ type Iterator interface {
 }
 
 //-----------------------------------------------------------------------------
+// Main entry
 
 const (
 	LevelDBBackendStr   = "leveldb" // legacy, defaults to goleveldb.

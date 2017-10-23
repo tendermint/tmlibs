@@ -28,6 +28,13 @@ func (db *MemDB) Get(key []byte) []byte {
 	return db.db[string(key)]
 }
 
+func (db *MemDB) GetOK(key []byte) ([]byte, bool) {
+	db.mtx.Lock()
+	defer db.mtx.Unlock()
+	value, ok := db.db[string(key)]
+	return value, ok
+}
+
 func (db *MemDB) Set(key []byte, value []byte) {
 	db.mtx.Lock()
 	defer db.mtx.Unlock()
@@ -71,6 +78,7 @@ func (db *MemDB) Print() {
 func (db *MemDB) Stats() map[string]string {
 	stats := make(map[string]string)
 	stats["database.type"] = "memDB"
+	stats["database.size"] = fmt.Sprintf("%d", len(db.db))
 	return stats
 }
 
@@ -132,46 +140,4 @@ func (db *MemDB) IteratorPrefix(prefix []byte) Iterator {
 
 func (db *MemDB) NewBatch() Batch {
 	return &memDBBatch{db, nil}
-}
-
-//--------------------------------------------------------------------------------
-
-type memDBBatch struct {
-	db  *MemDB
-	ops []operation
-}
-
-type opType int
-
-const (
-	opTypeSet    = 1
-	opTypeDelete = 2
-)
-
-type operation struct {
-	opType
-	key   []byte
-	value []byte
-}
-
-func (mBatch *memDBBatch) Set(key, value []byte) {
-	mBatch.ops = append(mBatch.ops, operation{opTypeSet, key, value})
-}
-
-func (mBatch *memDBBatch) Delete(key []byte) {
-	mBatch.ops = append(mBatch.ops, operation{opTypeDelete, key, nil})
-}
-
-func (mBatch *memDBBatch) Write() {
-	mBatch.db.mtx.Lock()
-	defer mBatch.db.mtx.Unlock()
-
-	for _, op := range mBatch.ops {
-		if op.opType == opTypeSet {
-			mBatch.db.db[string(op.key)] = op.value
-		} else if op.opType == opTypeDelete {
-			delete(mBatch.db.db, string(op.key))
-		}
-	}
-
 }
