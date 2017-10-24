@@ -3,7 +3,7 @@ package db
 import . "github.com/tendermint/tmlibs/common"
 
 type DB interface {
-	Get([]byte) []byte
+	Get([]byte) []byte // NOTE: returns nil iff never set or deleted.
 	Set([]byte, []byte)
 	SetSync([]byte, []byte)
 	Delete([]byte)
@@ -11,7 +11,6 @@ type DB interface {
 	Close()
 	NewBatch() Batch
 	Iterator() Iterator
-	IteratorPrefix([]byte) Iterator
 
 	// For debugging
 	Print()

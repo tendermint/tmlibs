@@ -11,7 +11,7 @@ all: test
 NOVENDOR = go list github.com/tendermint/tmlibs/... | grep -v /vendor/
 
 test:
-	go test `glide novendor`
+	go test -tags gcc `glide novendor`
 
 get_vendor_deps: ensure_tools
 	@rm -rf vendor/

@@ -112,16 +112,14 @@ func (db *CLevelDB) Stats() map[string]string {
 
 	stats := make(map[string]string)
 	for _, key := range keys {
-		str, err := db.db.GetProperty(key)
-		if err == nil {
-			stats[key] = str
-		}
+		str := db.db.PropertyValue(key)
+		stats[key] = str
 	}
 	return stats
 }
 
 func (db *CLevelDB) Iterator() Iterator {
-	return db.db.NewIterator(nil, nil)
+	return cLevelDBIterator{db.db.NewIterator(db.ro)}
 }
 
 func (db *CLevelDB) NewBatch() Batch {
@@ -129,7 +127,7 @@ func (db *CLevelDB) NewBatch() Batch {
 	return &cLevelDBBatch{db, batch}
 }
 
-//--------------------------------------------------------------------------------
+//----------------------------------------
 
 type cLevelDBBatch struct {
 	db    *CLevelDB
@@ -149,4 +147,24 @@ func (mBatch *cLevelDBBatch) Write() {
 	if err != nil {
 		PanicCrisis(err)
 	}
+}
+
+//----------------------------------------
+// CLevelDB Iterator adaptor
+
+type cLevelDBIterator struct {
+	*levigo.Iterator
+}
+
+func (c cLevelDBIterator) Next() bool {
+	c.Next()
+	return c.Valid()
+}
+
+func (c cLevelDBIterator) Release() {
+	c.Close()
+}
+
+func (c cLevelDBIterator) Error() error {
+	return c.GetError()
 }

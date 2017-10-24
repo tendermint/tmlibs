@@ -2,7 +2,7 @@ package db
 
 import (
 	"fmt"
-	"strings"
+	"sort"
 	"sync"
 )
 
@@ -38,12 +38,20 @@ func (db *MemDB) GetOK(key []byte) ([]byte, bool) {
 func (db *MemDB) Set(key []byte, value []byte) {
 	db.mtx.Lock()
 	defer db.mtx.Unlock()
-	db.db[string(key)] = value
+	db.SetNoLock(key, value)
 }
 
 func (db *MemDB) SetSync(key []byte, value []byte) {
 	db.mtx.Lock()
 	defer db.mtx.Unlock()
+	db.SetNoLock(key, value)
+}
+
+// NOTE: Implements atomicSetDeleter
+func (db *MemDB) SetNoLock(key []byte, value []byte) {
+	if value == nil {
+		value = []byte{}
+	}
 	db.db[string(key)] = value
 }
 
@@ -56,6 +64,11 @@ func (db *MemDB) Delete(key []byte) {
 func (db *MemDB) DeleteSync(key []byte) {
 	db.mtx.Lock()
 	defer db.mtx.Unlock()
+	delete(db.db, string(key))
+}
+
+// NOTE: Implements atomicSetDeleter
+func (db *MemDB) DeleteNoLock(key []byte) {
 	delete(db.db, string(key))
 }
 
@@ -118,10 +131,6 @@ func (it *memDBIterator) Error() error {
 }
 
 func (db *MemDB) Iterator() Iterator {
-	return db.IteratorPrefix([]byte{})
-}
-
-func (db *MemDB) IteratorPrefix(prefix []byte) Iterator {
 	it := newMemDBIterator()
 	it.db = db
 	it.last = -1
@@ -129,15 +138,19 @@ func (db *MemDB) IteratorPrefix(prefix []byte) Iterator {
 	db.mtx.Lock()
 	defer db.mtx.Unlock()
 
-	// unfortunately we need a copy of all of the keys
+	// We need a copy of all of the keys.
+	// Not the best, but probably not a bottleneck depending.
 	for key, _ := range db.db {
-		if strings.HasPrefix(key, string(prefix)) {
-			it.keys = append(it.keys, key)
-		}
+		it.keys = append(it.keys, key)
 	}
+	sort.Strings(it.keys)
 	return it
 }
 
 func (db *MemDB) NewBatch() Batch {
-	return &memDBBatch{db, nil}
+	return &memBatch{db, nil}
+}
+
+func (db *MemDB) Mutex() *sync.Mutex {
+	return &(db.mtx)
 }

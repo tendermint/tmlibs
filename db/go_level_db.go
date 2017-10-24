@@ -8,7 +8,6 @@ import (
 	"github.com/syndtr/goleveldb/leveldb/errors"
 	"github.com/syndtr/goleveldb/leveldb/iterator"
 	"github.com/syndtr/goleveldb/leveldb/opt"
-	"github.com/syndtr/goleveldb/leveldb/util"
 
 	. "github.com/tendermint/tmlibs/common"
 )
@@ -153,10 +152,6 @@ func (it *goLevelDBIterator) Release() {
 
 func (db *GoLevelDB) Iterator() Iterator {
 	return &goLevelDBIterator{db.db.NewIterator(nil, nil)}
-}
-
-func (db *GoLevelDB) IteratorPrefix(prefix []byte) Iterator {
-	return &goLevelDBIterator{db.db.NewIterator(util.BytesPrefix(prefix), nil)}
 }
 
 func (db *GoLevelDB) NewBatch() Batch {

@@ -1,0 +1,49 @@
+package db
+
+import "sync"
+
+type atomicSetDeleter interface {
+	Mutex() *sync.Mutex
+	SetNoLock(key, value []byte)
+	DeleteNoLock(key []byte)
+}
+
+type memBatch struct {
+	db  atomicSetDeleter
+	ops []operation
+}
+
+type opType int
+
+const (
+	opTypeSet    = 1
+	opTypeDelete = 2
+)
+
+type operation struct {
+	opType
+	key   []byte
+	value []byte
+}
+
+func (mBatch *memBatch) Set(key, value []byte) {
+	mBatch.ops = append(mBatch.ops, operation{opTypeSet, key, value})
+}
+
+func (mBatch *memBatch) Delete(key []byte) {
+	mBatch.ops = append(mBatch.ops, operation{opTypeDelete, key, nil})
+}
+
+func (mBatch *memBatch) Write() {
+	mtx := mBatch.db.Mutex()
+	mtx.Lock()
+	defer mtx.Unlock()
+
+	for _, op := range mBatch.ops {
+		if op.opType == opTypeSet {
+			mBatch.db.SetNoLock(op.key, op.value)
+		} else if op.opType == opTypeDelete {
+			mBatch.db.DeleteNoLock(op.key)
+		}
+	}
+}
