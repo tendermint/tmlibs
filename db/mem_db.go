@@ -154,3 +154,7 @@ func (db *MemDB) NewBatch() Batch {
 func (db *MemDB) Mutex() *sync.Mutex {
 	return &(db.mtx)
 }
+
+func (db *MemDB) CacheWrap() interface{} {
+	return NewCacheDB(db)
+}

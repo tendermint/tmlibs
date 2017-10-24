@@ -143,3 +143,7 @@ func (db *CacheDB) Commit() {
 func (db *CacheDB) Mutex() *sync.Mutex {
 	return &(db.mtx)
 }
+
+func (db *CacheDB) CacheWrap() interface{} {
+	return NewCacheDB(db)
+}
