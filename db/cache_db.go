@@ -6,17 +6,23 @@ import (
 	"sync"
 )
 
+// If value is nil but deleted is false,
+// it means the parent doesn't have the key.
+// (No need to delete upon Commit())
 type cDBValue struct {
 	value   []byte
 	deleted bool
 }
 
-// NOTE: Needed by MultiStore.CacheWrap().
+// CacheDB wraps an in-memory cache around an underlying DB.
 type CacheDB struct {
 	mtx    sync.Mutex
 	cache  map[string]cDBValue
 	parent DB
 }
+
+// NOTE: Needed by MultiStore.CacheWrap().
+var _ atomicSetDeleter = (*CacheDB)(nil)
 
 func NewCacheDB(parent DB) *CacheDB {
 	db := &CacheDB{
@@ -31,10 +37,12 @@ func (db *CacheDB) Get(key []byte) []byte {
 	defer db.mtx.Unlock()
 
 	value, ok := db.cache[string(key)]
-	if ok {
-		return value.value
+	if !ok {
+		data := db.parent.Get(key)
+		value = cDBValue{value: data}
+		db.cache[string(key)] = value
 	}
-	return db.parent.Get(key)
+	return value.value
 }
 
 func (db *CacheDB) Set(key []byte, value []byte) {
@@ -51,7 +59,6 @@ func (db *CacheDB) SetSync(key []byte, value []byte) {
 	db.SetNoLock(key, value)
 }
 
-// NOTE: Implements atomicSetDeleter
 func (db *CacheDB) SetNoLock(key []byte, value []byte) {
 	db.cache[string(key)] = cDBValue{value, false}
 }
@@ -60,17 +67,16 @@ func (db *CacheDB) Delete(key []byte) {
 	db.mtx.Lock()
 	defer db.mtx.Unlock()
 
-	db.cache[string(key)] = cDBValue{nil, true}
+	db.DeleteNoLock(key)
 }
 
 func (db *CacheDB) DeleteSync(key []byte) {
 	db.mtx.Lock()
 	defer db.mtx.Unlock()
 
-	db.cache[string(key)] = cDBValue{nil, true}
+	db.DeleteNoLock(key)
 }
 
-// NOTE: Implements atomicSetDeleter
 func (db *CacheDB) DeleteNoLock(key []byte) {
 	db.cache[string(key)] = cDBValue{nil, true}
 }
@@ -112,15 +118,15 @@ func (db *CacheDB) NewBatch() Batch {
 	return &memBatch{db, nil}
 }
 
-// Writes pending updates to the parent DB.
+// Commit writes pending updates to the parent database and clears the cache.
 func (db *CacheDB) Commit() {
 	db.mtx.Lock()
 	defer db.mtx.Unlock()
 
 	// We need a copy of all of the keys.
 	// Not the best, but probably not a bottleneck depending.
-	keys := []string{}
-	for key, _ := range db.cache {
+	keys := make([]string, 0, len(db.cache))
+	for key := range db.cache {
 		keys = append(keys, key)
 	}
 	sort.Strings(keys)
@@ -130,6 +136,8 @@ func (db *CacheDB) Commit() {
 		value := db.cache[key]
 		if value.deleted {
 			batch.Delete([]byte(key))
+		} else if value.value == nil {
+			// Skip, it already doesn't exist in parent.
 		} else {
 			batch.Set([]byte(key), value.value)
 		}

@@ -7,11 +7,10 @@ import (
 	"golang.org/x/crypto/ripemd160"
 )
 
-// A list of KVPairs is hashed via `SimpleHashFromHashables`.
 // NOTE: Behavior is undefined with dup keys.
 type KVPair struct {
 	Key   string
-	Value interface{}
+	Value interface{} // Can be Hashable or not.
 }
 
 func (kv KVPair) Hash() []byte {
@@ -36,12 +35,12 @@ func (kvps KVPairs) Swap(i, j int)      { kvps[i], kvps[j] = kvps[j], kvps[i] }
 func (kvps KVPairs) Sort()              { sort.Sort(kvps) }
 
 func MakeSortedKVPairs(m map[string]interface{}) []Hashable {
-	kvPairs := []KVPair{}
+	kvPairs := make([]KVPair, 0, len(m))
 	for k, v := range m {
 		kvPairs = append(kvPairs, KVPair{k, v})
 	}
 	KVPairs(kvPairs).Sort()
-	kvPairsH := []Hashable{}
+	kvPairsH := make([]Hashable, 0, len(kvPairs))
 	for _, kvp := range kvPairs {
 		kvPairsH = append(kvPairsH, kvp)
 	}

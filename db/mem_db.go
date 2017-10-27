@@ -96,6 +96,37 @@ func (db *MemDB) Stats() map[string]string {
 	return stats
 }
 
+func (db *MemDB) NewBatch() Batch {
+	return &memBatch{db, nil}
+}
+
+func (db *MemDB) Mutex() *sync.Mutex {
+	return &(db.mtx)
+}
+
+func (db *MemDB) CacheWrap() interface{} {
+	return NewCacheDB(db)
+}
+
+//----------------------------------------
+
+func (db *MemDB) Iterator() Iterator {
+	it := newMemDBIterator()
+	it.db = db
+	it.cur = 0
+
+	db.mtx.Lock()
+	defer db.mtx.Unlock()
+
+	// We need a copy of all of the keys.
+	// Not the best, but probably not a bottleneck depending.
+	for key, _ := range db.db {
+		it.keys = append(it.keys, key)
+	}
+	sort.Strings(it.keys)
+	return it
+}
+
 type memDBIterator struct {
 	cur  int
 	keys []string
@@ -155,33 +186,4 @@ func (it *memDBIterator) Close() {
 
 func (it *memDBIterator) GetError() error {
 	return nil
-}
-
-func (db *MemDB) Iterator() Iterator {
-	it := newMemDBIterator()
-	it.db = db
-	it.cur = 0
-
-	db.mtx.Lock()
-	defer db.mtx.Unlock()
-
-	// We need a copy of all of the keys.
-	// Not the best, but probably not a bottleneck depending.
-	for key, _ := range db.db {
-		it.keys = append(it.keys, key)
-	}
-	sort.Strings(it.keys)
-	return it
-}
-
-func (db *MemDB) NewBatch() Batch {
-	return &memBatch{db, nil}
-}
-
-func (db *MemDB) Mutex() *sync.Mutex {
-	return &(db.mtx)
-}
-
-func (db *MemDB) CacheWrap() interface{} {
-	return NewCacheDB(db)
 }

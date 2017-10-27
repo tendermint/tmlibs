@@ -68,7 +68,7 @@ func (pi *prefixIterator) Value() []byte {
 	return pi.itr.Value()
 }
 
-func (pi *prefixIterator) Close()          {}
+func (pi *prefixIterator) Close()          { pi.itr.Close() }
 func (pi *prefixIterator) GetError() error { return pi.itr.GetError() }
 
 func IteratePrefix(db DB, prefix []byte) Iterator {

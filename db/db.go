@@ -14,6 +14,8 @@ type DB interface {
 
 	// For debugging
 	Print()
+
+	// Stats returns a map of property values for all keys and the size of the cache.
 	Stats() map[string]string
 }
 
@@ -55,9 +57,13 @@ type Iterator interface {
 	Prev()
 
 	// Key returns the key of the cursor.
+	//
+	// If Valid returns false, this method will panic.
 	Key() []byte
 
 	// Value returns the key of the cursor.
+	//
+	// If Valid returns false, this method will panic.
 	Value() []byte
 
 	// GetError returns an IteratorError from LevelDB if it had one during

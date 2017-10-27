@@ -26,13 +26,7 @@ func SimpleProofsFromHashables(items []Hashable) (rootHash []byte, proofs []*Sim
 // which hashes to rootHash.
 func (sp *SimpleProof) Verify(index int, total int, leafHash []byte, rootHash []byte) bool {
 	computedHash := computeHashFromAunts(index, total, leafHash, sp.Aunts)
-	if computedHash == nil {
-		return false
-	}
-	if !bytes.Equal(computedHash, rootHash) {
-		return false
-	}
-	return true
+	return computedHash != nil && bytes.Equal(computedHash, rootHash)
 }
 
 func (sp *SimpleProof) String() string {

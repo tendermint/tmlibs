@@ -20,25 +20,11 @@ func checkNext(t *testing.T, itr Iterator, expected bool) {
 }
 
 func checkNextPanics(t *testing.T, itr Iterator) {
-	defer func() {
-		if r := recover(); r != nil {
-			// OK!
-		} else {
-			assert.Fail(t, "checkNextPanics expected panic but didn't")
-		}
-	}()
-	itr.Next()
+	assert.Panics(t, func() { itr.Next() }, "checkNextPanics expected panic but didn't")
 }
 
 func checkPrevPanics(t *testing.T, itr Iterator) {
-	defer func() {
-		if r := recover(); r != nil {
-			// OK!
-		} else {
-			assert.Fail(t, "checkPrevPanics expected panic but didn't")
-		}
-	}()
-	itr.Prev()
+	assert.Panics(t, func() { itr.Prev() }, "checkPrevPanics expected panic but didn't")
 }
 
 func checkPrev(t *testing.T, itr Iterator, expected bool) {
@@ -62,44 +48,18 @@ func checkInvalid(t *testing.T, itr Iterator) {
 }
 
 func checkKeyPanics(t *testing.T, itr Iterator) {
-	defer func() {
-		if r := recover(); r != nil {
-			// OK!
-		} else {
-			assert.Fail(t, "checkKeyPanics expected panic but didn't")
-		}
-	}()
-	itr.Key()
+	assert.Panics(t, func() { itr.Key() }, "checkKeyPanics expected panic but didn't")
 }
 
 func checkValuePanics(t *testing.T, itr Iterator) {
-	defer func() {
-		if r := recover(); r != nil {
-			// OK!
-		} else {
-			assert.Fail(t, "checkValuePanics expected panic but didn't")
-		}
-	}()
-	itr.Value()
+	assert.Panics(t, func() { itr.Key() }, "checkValuePanics expected panic but didn't")
 }
 
 func newTempDB(t *testing.T, backend string) (db DB) {
-	dir, dirname := common.Tempdir(fmt.Sprintf("test_go_iterator"))
+	dir, dirname := common.Tempdir("test_go_iterator")
 	db = NewDB("testdb", backend, dirname)
 	dir.Close()
 	return db
-}
-
-func testIteratorEmpty(t *testing.T, backend string) {
-	db := newTempDB(t, backend)
-	itr := db.Iterator()
-
-	checkValid(t, itr, false)
-	checkNextPanics(t, itr)
-	checkPrevPanics(t, itr)
-
-	// Once invalid...
-	checkInvalid(t, itr)
 }
 
 func TestDBIteratorSingleKey(t *testing.T) {
@@ -175,6 +135,17 @@ func TestDBIteratorTwoKeys(t *testing.T) {
 	}
 }
 
+func TestDBIteratorEmpty(t *testing.T) {
+	for backend, _ := range backends {
+		t.Run(fmt.Sprintf("Backend %s", backend), func(t *testing.T) {
+			db := newTempDB(t, backend)
+			itr := db.Iterator()
+
+			checkInvalid(t, itr)
+		})
+	}
+}
+
 func TestDBIteratorEmptySeek(t *testing.T) {
 	for backend, _ := range backends {
 		t.Run(fmt.Sprintf("Backend %s", backend), func(t *testing.T) {
@@ -188,19 +159,6 @@ func TestDBIteratorEmptySeek(t *testing.T) {
 }
 
 func TestDBIteratorBadSeek(t *testing.T) {
-	for backend, _ := range backends {
-		t.Run(fmt.Sprintf("Backend %s", backend), func(t *testing.T) {
-			db := newTempDB(t, backend)
-			db.SetSync(bz("1"), bz("value_1"))
-			itr := db.Iterator()
-			itr.Seek(bz("2"))
-
-			checkInvalid(t, itr)
-		})
-	}
-}
-
-func TestDBIteratorBadSeekPrev(t *testing.T) {
 	for backend, _ := range backends {
 		t.Run(fmt.Sprintf("Backend %s", backend), func(t *testing.T) {
 			db := newTempDB(t, backend)

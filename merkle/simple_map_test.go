@@ -5,15 +5,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	// "github.com/stretchr/testify/require"
 )
 
 func TestSimpleMap(t *testing.T) {
-	{
-		db := NewSimpleMap()
-		db.Set("key1", "value1")
-		assert.Equal(t, "376bf717ebe3659a34f68edb833dfdcf4a2d3c10", fmt.Sprintf("%x", db.Hash()), "Hash didn't match")
-	}
 	{
 		db := NewSimpleMap()
 		db.Set("key1", "value1")

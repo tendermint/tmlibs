@@ -40,9 +40,10 @@ func (mBatch *memBatch) Write() {
 	defer mtx.Unlock()
 
 	for _, op := range mBatch.ops {
-		if op.opType == opTypeSet {
+		switch op.opType {
+		case opTypeSet:
 			mBatch.db.SetNoLock(op.key, op.value)
-		} else if op.opType == opTypeDelete {
+		case opTypeDelete:
 			mBatch.db.DeleteNoLock(op.key)
 		}
 	}

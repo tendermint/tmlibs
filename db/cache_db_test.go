@@ -15,14 +15,15 @@ func TestCacheDB(t *testing.T) {
 	require.Empty(t, cdb.Get(bz("key1")), "Expected `key1` to be empty")
 
 	mem.Set(bz("key1"), bz("value1"))
-	require.Equal(t, cdb.Get(bz("key1")), bz("value1"), "Expected `key1` to be `value1`")
+	cdb.Set(bz("key1"), bz("value1"))
+	require.Equal(t, bz("value1"), cdb.Get(bz("key1")), "Expected `key1` to be `value1`")
 
 	cdb.Set(bz("key1"), bz("value2"))
-	require.Equal(t, cdb.Get(bz("key1")), bz("value2"), "Expected `key1` to be `value2`")
-	require.Equal(t, mem.Get(bz("key1")), bz("value1"), "Expected `key1` to be `value1`")
+	require.Equal(t, bz("value2"), cdb.Get(bz("key1")), "Expected `key1` to be `value2`")
+	require.Equal(t, bz("value1"), mem.Get(bz("key1")), "Expected `key1` to be `value1`")
 
 	cdb.Commit()
-	require.Equal(t, mem.Get(bz("key1")), bz("value2"), "Expected `key1` to be `value2`")
+	require.Equal(t, bz("value2"), mem.Get(bz("key1")), "Expected `key1` to be `value2`")
 
 	cdb.Delete(bz("key1"))
 	require.Empty(t, cdb.Get(bz("key1")), "Expected `key1` to be empty")

@@ -116,18 +116,12 @@ func (db *CLevelDB) Stats() map[string]string {
 	return stats
 }
 
-func (db *CLevelDB) Iterator() Iterator {
-	itr := db.db.NewIterator(db.ro)
-	itr.Seek([]byte{0x00})
-	return cLevelDBIterator{itr}
-}
+//----------------------------------------
 
 func (db *CLevelDB) NewBatch() Batch {
 	batch := levigo.NewWriteBatch()
 	return &cLevelDBBatch{db, batch}
 }
-
-//----------------------------------------
 
 type cLevelDBBatch struct {
 	db    *CLevelDB
@@ -150,7 +144,12 @@ func (mBatch *cLevelDBBatch) Write() {
 }
 
 //----------------------------------------
-// CLevelDB Iterator adaptor
+
+func (db *CLevelDB) Iterator() Iterator {
+	itr := db.db.NewIterator(db.ro)
+	itr.Seek([]byte{0x00})
+	return cLevelDBIterator{itr}
+}
 
 type cLevelDBIterator struct {
 	itr *levigo.Iterator
@@ -196,9 +195,9 @@ func (c cLevelDBIterator) Prev() {
 }
 
 func (c cLevelDBIterator) Close() {
-	c.Close()
+	c.itr.Close()
 }
 
 func (c cLevelDBIterator) GetError() error {
-	return c.GetError()
+	return c.itr.GetError()
 }

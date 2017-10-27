@@ -10,15 +10,15 @@ func NewSimpleMap() *SimpleMap {
 	}
 }
 
-func (sm *SimpleMap) Set(k string, v interface{}) {
-	sm.kvz = append(sm.kvz, KVPair{Key: k, Value: v})
+func (sm *SimpleMap) Set(k string, o interface{}) {
+	sm.kvz = append(sm.kvz, KVPair{Key: k, Value: o})
 }
 
 // Merkle root hash of items sorted by key.
 // NOTE: Behavior is undefined when key is duplicate.
 func (sm *SimpleMap) Hash() []byte {
 	sm.kvz.Sort()
-	kvPairsH := []Hashable{}
+	kvPairsH := make([]Hashable, 0, len(sm.kvz))
 	for _, kvp := range sm.kvz {
 		kvPairsH = append(kvPairsH, kvp)
 	}

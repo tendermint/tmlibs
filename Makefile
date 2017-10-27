@@ -32,20 +32,19 @@ metalinter_test: ensure_tools
 		--enable=gas \
 		--enable=goconst \
 		--enable=gosimple \
-	 	--enable=ineffassign \
-	   	--enable=interfacer \
+		--enable=ineffassign \
+		--enable=interfacer \
 		--enable=megacheck \
-	 	--enable=misspell \
-	   	--enable=staticcheck \
+		--enable=misspell \
+		--enable=staticcheck \
 		--enable=safesql \
-	   	--enable=structcheck \
-	   	--enable=unconvert \
+		--enable=structcheck \
+		--enable=unconvert \
 		--enable=unused \
-	   	--enable=varcheck \
+		--enable=varcheck \
 		--enable=vetshadow \
 		--enable=vet \
 		./...
-
 		#--enable=aligncheck \
 		#--enable=dupl \
 		#--enable=errcheck \
@@ -53,4 +52,4 @@ metalinter_test: ensure_tools
 		#--enable=goimports \
 		#--enable=golint \ <== comments on anything exported
 		#--enable=gotype \
-	   	#--enable=unparam \
+		#--enable=unparam \
