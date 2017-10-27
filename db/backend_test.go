@@ -8,10 +8,6 @@ import (
 	common "github.com/tendermint/go-common"
 )
 
-func print(x []byte) {
-	fmt.Println(x, x == nil)
-}
-
 func testBackend(t *testing.T, backend string) {
 	// Default
 	dir, dirname := common.Tempdir(fmt.Sprintf("test_backend_%s_", backend))
@@ -24,11 +20,15 @@ func testBackend(t *testing.T, backend string) {
 	db.Set([]byte(""), []byte(""))
 	require.NotNil(t, db.Get([]byte("")))
 	require.NotNil(t, db.Get(nil))
+	require.Empty(t, db.Get([]byte("")))
+	require.Empty(t, db.Get(nil))
 
 	// Set empty (nil)
 	db.Set([]byte(""), nil)
 	require.NotNil(t, db.Get([]byte("")))
 	require.NotNil(t, db.Get(nil))
+	require.Empty(t, db.Get([]byte("")))
+	require.Empty(t, db.Get(nil))
 
 	// Delete
 	db.Delete([]byte(""))

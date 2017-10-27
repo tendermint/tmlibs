@@ -86,11 +86,11 @@ func (db *CacheDB) Print() {
 	db.mtx.Lock()
 	defer db.mtx.Unlock()
 
-	fmt.Println("CacheDB\ncache:\n")
+	fmt.Println("CacheDB\ncache:")
 	for key, value := range db.cache {
-		fmt.Printf("[%X]:\t[%X]\n", []byte(key), value)
+		fmt.Printf("[%X]:\t[%v]\n", []byte(key), value)
 	}
-	fmt.Println("\nparent:\n")
+	fmt.Println("\nparent:")
 	db.parent.Print()
 }
 
@@ -131,7 +131,7 @@ func (db *CacheDB) Commit() {
 		if value.deleted {
 			batch.Delete([]byte(key))
 		} else {
-			batch.Set([]byte(key), []byte(value.value))
+			batch.Set([]byte(key), value.value)
 		}
 	}
 	batch.Write()

@@ -23,14 +23,51 @@ type Batch interface {
 	Write()
 }
 
-type Iterator interface {
-	Next() bool
+/*
+	Usage:
 
+	for itr.Seek(mykey); itr.Valid(); itr.Next() {
+		k, v := itr.Key(); itr.Value()
+		....
+	}
+*/
+type Iterator interface {
+
+	// Seek moves the iterator the position of the key given or, if the key
+	// doesn't exist, the next key that does exist in the database. If the key
+	// doesn't exist, and there is no next key, the Iterator becomes invalid.
+	Seek(key []byte)
+
+	// Valid returns false only when an Iterator has iterated past either the
+	// first or the last key in the database.
+	Valid() bool
+
+	// Next moves the iterator to the next sequential key in the database, as
+	// defined by the Comparator in the ReadOptions used to create this Iterator.
+	//
+	// If Valid returns false, this method will panic.
+	Next()
+
+	// Prev moves the iterator to the previous sequential key in the database, as
+	// defined by the Comparator in the ReadOptions used to create this Iterator.
+	//
+	// If Valid returns false, this method will panic.
+	Prev()
+
+	// Key returns the key of the cursor.
 	Key() []byte
+
+	// Value returns the key of the cursor.
 	Value() []byte
 
-	Release()
-	Error() error
+	// GetError returns an IteratorError from LevelDB if it had one during
+	// iteration.
+	//
+	// This method is safe to call when Valid returns false.
+	GetError() error
+
+	// Close deallocates the given Iterator.
+	Close()
 }
 
 //-----------------------------------------------------------------------------

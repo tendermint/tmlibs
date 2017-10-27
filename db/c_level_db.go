@@ -7,8 +7,6 @@ import (
 	"path"
 
 	"github.com/jmhodges/levigo"
-
-	. "github.com/tendermint/tmlibs/common"
 )
 
 func init() {
@@ -52,7 +50,7 @@ func NewCLevelDB(name string, dir string) (*CLevelDB, error) {
 func (db *CLevelDB) Get(key []byte) []byte {
 	res, err := db.db.Get(db.ro, key)
 	if err != nil {
-		PanicCrisis(err)
+		panic(err)
 	}
 	return res
 }
@@ -60,28 +58,28 @@ func (db *CLevelDB) Get(key []byte) []byte {
 func (db *CLevelDB) Set(key []byte, value []byte) {
 	err := db.db.Put(db.wo, key, value)
 	if err != nil {
-		PanicCrisis(err)
+		panic(err)
 	}
 }
 
 func (db *CLevelDB) SetSync(key []byte, value []byte) {
 	err := db.db.Put(db.woSync, key, value)
 	if err != nil {
-		PanicCrisis(err)
+		panic(err)
 	}
 }
 
 func (db *CLevelDB) Delete(key []byte) {
 	err := db.db.Delete(db.wo, key)
 	if err != nil {
-		PanicCrisis(err)
+		panic(err)
 	}
 }
 
 func (db *CLevelDB) DeleteSync(key []byte) {
 	err := db.db.Delete(db.woSync, key)
 	if err != nil {
-		PanicCrisis(err)
+		panic(err)
 	}
 }
 
@@ -97,11 +95,11 @@ func (db *CLevelDB) Close() {
 }
 
 func (db *CLevelDB) Print() {
-	iter := db.db.NewIterator(db.ro)
-	defer iter.Close()
-	for iter.Seek(nil); iter.Valid(); iter.Next() {
-		key := iter.Key()
-		value := iter.Value()
+	itr := db.Iterator()
+	defer itr.Close()
+	for itr.Seek(nil); itr.Valid(); itr.Next() {
+		key := itr.Key()
+		value := itr.Value()
 		fmt.Printf("[%X]:\t[%X]\n", key, value)
 	}
 }
@@ -119,7 +117,9 @@ func (db *CLevelDB) Stats() map[string]string {
 }
 
 func (db *CLevelDB) Iterator() Iterator {
-	return cLevelDBIterator{db.db.NewIterator(db.ro)}
+	itr := db.db.NewIterator(db.ro)
+	itr.Seek([]byte{0x00})
+	return cLevelDBIterator{itr}
 }
 
 func (db *CLevelDB) NewBatch() Batch {
@@ -145,7 +145,7 @@ func (mBatch *cLevelDBBatch) Delete(key []byte) {
 func (mBatch *cLevelDBBatch) Write() {
 	err := mBatch.db.db.Write(mBatch.db.wo, mBatch.batch)
 	if err != nil {
-		PanicCrisis(err)
+		panic(err)
 	}
 }
 
@@ -153,18 +153,52 @@ func (mBatch *cLevelDBBatch) Write() {
 // CLevelDB Iterator adaptor
 
 type cLevelDBIterator struct {
-	*levigo.Iterator
+	itr *levigo.Iterator
 }
 
-func (c cLevelDBIterator) Next() bool {
-	c.Next()
-	return c.Valid()
+func (c cLevelDBIterator) Seek(key []byte) {
+	if key == nil {
+		key = []byte{0x00}
+	}
+	c.itr.Seek(key)
 }
 
-func (c cLevelDBIterator) Release() {
+func (c cLevelDBIterator) Valid() bool {
+	return c.itr.Valid()
+}
+
+func (c cLevelDBIterator) Key() []byte {
+	if !c.itr.Valid() {
+		panic("cLevelDBIterator Key() called when invalid")
+	}
+	return c.itr.Key()
+}
+
+func (c cLevelDBIterator) Value() []byte {
+	if !c.itr.Valid() {
+		panic("cLevelDBIterator Value() called when invalid")
+	}
+	return c.itr.Value()
+}
+
+func (c cLevelDBIterator) Next() {
+	if !c.itr.Valid() {
+		panic("cLevelDBIterator Next() called when invalid")
+	}
+	c.itr.Next()
+}
+
+func (c cLevelDBIterator) Prev() {
+	if !c.itr.Valid() {
+		panic("cLevelDBIterator Prev() called when invalid")
+	}
+	c.itr.Prev()
+}
+
+func (c cLevelDBIterator) Close() {
 	c.Close()
 }
 
-func (c cLevelDBIterator) Error() error {
+func (c cLevelDBIterator) GetError() error {
 	return c.GetError()
 }

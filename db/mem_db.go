@@ -1,6 +1,7 @@
 package db
 
 import (
+	"bytes"
 	"fmt"
 	"sort"
 	"sync"
@@ -96,7 +97,7 @@ func (db *MemDB) Stats() map[string]string {
 }
 
 type memDBIterator struct {
-	last int
+	cur  int
 	keys []string
 	db   *MemDB
 }
@@ -105,35 +106,61 @@ func newMemDBIterator() *memDBIterator {
 	return &memDBIterator{}
 }
 
-func (it *memDBIterator) Next() bool {
-	if it.last >= len(it.keys)-1 {
-		return false
+func (it *memDBIterator) Seek(key []byte) {
+	for i, ik := range it.keys {
+		it.cur = i
+		if bytes.Compare(key, []byte(ik)) <= 0 {
+			return
+		}
 	}
-	it.last++
-	return true
+	it.cur += 1 // If not found, becomes invalid.
+}
+
+func (it *memDBIterator) Valid() bool {
+	return 0 <= it.cur && it.cur < len(it.keys)
+}
+
+func (it *memDBIterator) Next() {
+	if !it.Valid() {
+		panic("memDBIterator Next() called when invalid")
+	}
+	it.cur++
+}
+
+func (it *memDBIterator) Prev() {
+	if !it.Valid() {
+		panic("memDBIterator Next() called when invalid")
+	}
+	it.cur--
 }
 
 func (it *memDBIterator) Key() []byte {
-	return []byte(it.keys[it.last])
+	if !it.Valid() {
+		panic("memDBIterator Key() called when invalid")
+	}
+	return []byte(it.keys[it.cur])
 }
 
 func (it *memDBIterator) Value() []byte {
+	if !it.Valid() {
+		panic("memDBIterator Value() called when invalid")
+	}
 	return it.db.Get(it.Key())
 }
 
-func (it *memDBIterator) Release() {
+func (it *memDBIterator) Close() {
 	it.db = nil
 	it.keys = nil
 }
 
-func (it *memDBIterator) Error() error {
+func (it *memDBIterator) GetError() error {
 	return nil
 }
 
 func (db *MemDB) Iterator() Iterator {
 	it := newMemDBIterator()
 	it.db = db
-	it.last = -1
+	it.cur = 0
 
 	db.mtx.Lock()
 	defer db.mtx.Unlock()

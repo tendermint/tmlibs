@@ -57,7 +57,6 @@ func computeHashFromAunts(index int, total int, leafHash []byte, innerHashes [][
 	switch total {
 	case 0:
 		panic("Cannot call computeHashFromAunts() with 0 total")
-		return nil
 	case 1:
 		if len(innerHashes) != 0 {
 			return nil

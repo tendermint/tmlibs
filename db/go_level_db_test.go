@@ -6,8 +6,91 @@ import (
 	"fmt"
 	"testing"
 
-	. "github.com/tendermint/tmlibs/common"
+	"github.com/tendermint/tmlibs/common"
 )
+
+func newGoDB(t *testing.T) (db DB) {
+	dir, dirname := common.Tempdir(fmt.Sprintf("test_go_iterator"))
+	db, err := NewGoLevelDB("testdb", dirname)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir.Close()
+	return db
+}
+
+func TestGoIteratorEmpty(t *testing.T) {
+	db := newGoDB(t)
+	itr := db.Iterator()
+
+	checkValid(t, itr, false)
+	checkNextPanics(t, itr)
+	checkPrevPanics(t, itr)
+
+	checkNextPanics(t, itr) // Double check...
+	checkNextPanics(t, itr)
+	checkPrevPanics(t, itr)
+	checkPrevPanics(t, itr)
+}
+
+func TestGoIteratorSingleKey(t *testing.T) {
+	db := newGoDB(t)
+	db.SetSync(bz("1"), bz("value_1"))
+	itr := db.Iterator()
+
+	checkValid(t, itr, true)
+	checkNext(t, itr, false)
+	checkValid(t, itr, false)
+	checkNextPanics(t, itr)
+	checkPrevPanics(t, itr) // Once invalid...
+}
+
+func TestGoIteratorTwoKeys(t *testing.T) {
+	db := newGoDB(t)
+	db.SetSync(bz("1"), bz("value_1"))
+	db.SetSync(bz("2"), bz("value_1"))
+
+	{ // Fail by calling Next too much
+		itr := db.Iterator()
+		checkValid(t, itr, true)
+
+		for i := 0; i < 10; i++ {
+			checkNext(t, itr, true)
+			checkValid(t, itr, true)
+
+			checkPrev(t, itr, true)
+			checkValid(t, itr, true)
+		}
+
+		checkNext(t, itr, true)
+		checkValid(t, itr, true)
+
+		checkNext(t, itr, false)
+		checkValid(t, itr, false)
+
+		checkNextPanics(t, itr)
+		checkPrevPanics(t, itr) // Once invalid...
+	}
+
+	{ // Fail by calling Prev too much
+		itr := db.Iterator()
+		checkValid(t, itr, true)
+
+		for i := 0; i < 10; i++ {
+			checkNext(t, itr, true)
+			checkValid(t, itr, true)
+
+			checkPrev(t, itr, true)
+			checkValid(t, itr, true)
+		}
+
+		checkPrev(t, itr, false)
+		checkValid(t, itr, false)
+
+		checkPrevPanics(t, itr)
+		checkNextPanics(t, itr) // Once invalid...
+	}
+}
 
 func BenchmarkRandomReadsWrites(b *testing.B) {
 	b.StopTimer()
@@ -17,7 +100,7 @@ func BenchmarkRandomReadsWrites(b *testing.B) {
 	for i := 0; i < int(numItems); i++ {
 		internal[int64(i)] = int64(0)
 	}
-	db, err := NewGoLevelDB(Fmt("test_%x", RandStr(12)), "")
+	db, err := NewGoLevelDB(common.Fmt("test_%x", common.RandStr(12)), "")
 	if err != nil {
 		b.Fatal(err.Error())
 		return
@@ -29,7 +112,7 @@ func BenchmarkRandomReadsWrites(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		// Write something
 		{
-			idx := (int64(RandInt()) % numItems)
+			idx := (int64(common.RandInt()) % numItems)
 			internal[idx] += 1
 			val := internal[idx]
 			idxBytes := int642Bytes(int64(idx))
@@ -42,7 +125,7 @@ func BenchmarkRandomReadsWrites(b *testing.B) {
 		}
 		// Read something
 		{
-			idx := (int64(RandInt()) % numItems)
+			idx := (int64(common.RandInt()) % numItems)
 			val := internal[idx]
 			idxBytes := int642Bytes(int64(idx))
 			valBytes := db.Get(idxBytes)
