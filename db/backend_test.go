@@ -5,12 +5,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	common "github.com/tendermint/go-common"
+	cmn "github.com/tendermint/tmlibs/common"
 )
 
 func testBackend(t *testing.T, backend string) {
 	// Default
-	dir, dirname := common.Tempdir(fmt.Sprintf("test_backend_%s_", backend))
+	dir, dirname := cmn.Tempdir(fmt.Sprintf("test_backend_%s_", backend))
 	defer dir.Close()
 	db := NewDB("testdb", backend, dirname)
 	require.Nil(t, db.Get([]byte("")))
