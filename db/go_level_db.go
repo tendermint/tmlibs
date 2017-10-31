@@ -34,7 +34,7 @@ func NewGoLevelDB(name string, dir string) (*GoLevelDB, error) {
 	}
 	database := &GoLevelDB{
 		db:       db,
-		cwwMutex: newCWWMutex(),
+		cwwMutex: NewCWWMutex(),
 	}
 	return database, nil
 }

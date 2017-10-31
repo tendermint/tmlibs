@@ -36,7 +36,7 @@ func NewCacheDB(parent DB, lockVersion interface{}) *CacheDB {
 		cache:       make(map[string]cDBValue),
 		parent:      parent,
 		lockVersion: lockVersion,
-		cwwMutex:    newCWWMutex(),
+		cwwMutex:    NewCWWMutex(),
 	}
 	return db
 }
@@ -195,7 +195,7 @@ type cwwMutex struct {
 	written *int32
 }
 
-func newCWWMutex() cwwMutex {
+func NewCWWMutex() cwwMutex {
 	return cwwMutex{
 		written: new(int32),
 	}

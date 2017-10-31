@@ -46,7 +46,7 @@ func NewCLevelDB(name string, dir string) (*CLevelDB, error) {
 		wo:     wo,
 		woSync: woSync,
 
-		cwwMutex: newCWWMutex(),
+		cwwMutex: NewCWWMutex(),
 	}
 	return database, nil
 }

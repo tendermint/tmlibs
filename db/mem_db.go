@@ -23,7 +23,7 @@ type MemDB struct {
 func NewMemDB() *MemDB {
 	database := &MemDB{
 		db:       make(map[string][]byte),
-		cwwMutex: newCWWMutex(),
+		cwwMutex: NewCWWMutex(),
 	}
 	return database
 }
