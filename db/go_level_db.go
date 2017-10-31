@@ -22,6 +22,8 @@ func init() {
 
 type GoLevelDB struct {
 	db *leveldb.DB
+
+	cwwMutex
 }
 
 func NewGoLevelDB(name string, dir string) (*GoLevelDB, error) {
@@ -30,7 +32,10 @@ func NewGoLevelDB(name string, dir string) (*GoLevelDB, error) {
 	if err != nil {
 		return nil, err
 	}
-	database := &GoLevelDB{db: db}
+	database := &GoLevelDB{
+		db:       db,
+		cwwMutex: newCWWMutex(),
+	}
 	return database, nil
 }
 
@@ -116,7 +121,12 @@ func (db *GoLevelDB) Stats() map[string]string {
 	return stats
 }
 
+func (db *GoLevelDB) CacheWrap() interface{} {
+	return NewCacheDB(db, db.GetWriteLockVersion())
+}
+
 //----------------------------------------
+// Batch
 
 func (db *GoLevelDB) NewBatch() Batch {
 	batch := new(leveldb.Batch)
@@ -144,6 +154,7 @@ func (mBatch *goLevelDBBatch) Write() {
 }
 
 //----------------------------------------
+// Iterator
 
 func (db *GoLevelDB) Iterator() Iterator {
 	itr := &goLevelDBIterator{

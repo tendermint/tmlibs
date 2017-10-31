@@ -16,22 +16,29 @@ func init() {
 type MemDB struct {
 	mtx sync.Mutex
 	db  map[string][]byte
+
+	cwwMutex
 }
 
 func NewMemDB() *MemDB {
-	database := &MemDB{db: make(map[string][]byte)}
+	database := &MemDB{
+		db:       make(map[string][]byte),
+		cwwMutex: newCWWMutex(),
+	}
 	return database
 }
 
 func (db *MemDB) Get(key []byte) []byte {
 	db.mtx.Lock()
 	defer db.mtx.Unlock()
+
 	return db.db[string(key)]
 }
 
 func (db *MemDB) GetOK(key []byte) ([]byte, bool) {
 	db.mtx.Lock()
 	defer db.mtx.Unlock()
+
 	value, ok := db.db[string(key)]
 	return value, ok
 }
@@ -39,12 +46,14 @@ func (db *MemDB) GetOK(key []byte) ([]byte, bool) {
 func (db *MemDB) Set(key []byte, value []byte) {
 	db.mtx.Lock()
 	defer db.mtx.Unlock()
+
 	db.SetNoLock(key, value)
 }
 
 func (db *MemDB) SetSync(key []byte, value []byte) {
 	db.mtx.Lock()
 	defer db.mtx.Unlock()
+
 	db.SetNoLock(key, value)
 }
 
@@ -59,12 +68,14 @@ func (db *MemDB) SetNoLock(key []byte, value []byte) {
 func (db *MemDB) Delete(key []byte) {
 	db.mtx.Lock()
 	defer db.mtx.Unlock()
+
 	delete(db.db, string(key))
 }
 
 func (db *MemDB) DeleteSync(key []byte) {
 	db.mtx.Lock()
 	defer db.mtx.Unlock()
+
 	delete(db.db, string(key))
 }
 
@@ -84,12 +95,16 @@ func (db *MemDB) Close() {
 func (db *MemDB) Print() {
 	db.mtx.Lock()
 	defer db.mtx.Unlock()
+
 	for key, value := range db.db {
 		fmt.Printf("[%X]:\t[%X]\n", []byte(key), value)
 	}
 }
 
 func (db *MemDB) Stats() map[string]string {
+	db.mtx.Lock()
+	defer db.mtx.Unlock()
+
 	stats := make(map[string]string)
 	stats["database.type"] = "memDB"
 	stats["database.size"] = fmt.Sprintf("%d", len(db.db))
@@ -97,6 +112,9 @@ func (db *MemDB) Stats() map[string]string {
 }
 
 func (db *MemDB) NewBatch() Batch {
+	db.mtx.Lock()
+	defer db.mtx.Unlock()
+
 	return &memBatch{db, nil}
 }
 
@@ -105,7 +123,7 @@ func (db *MemDB) Mutex() *sync.Mutex {
 }
 
 func (db *MemDB) CacheWrap() interface{} {
-	return NewCacheDB(db)
+	return NewCacheDB(db, db.GetWriteLockVersion())
 }
 
 //----------------------------------------

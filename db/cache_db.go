@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"sort"
 	"sync"
+	"sync/atomic"
 )
 
 // If value is nil but deleted is false,
 // it means the parent doesn't have the key.
-// (No need to delete upon Commit())
+// (No need to delete upon Write())
 type cDBValue struct {
 	value   []byte
 	deleted bool
@@ -16,18 +17,26 @@ type cDBValue struct {
 
 // CacheDB wraps an in-memory cache around an underlying DB.
 type CacheDB struct {
-	mtx    sync.Mutex
-	cache  map[string]cDBValue
-	parent DB
+	mtx         sync.Mutex
+	cache       map[string]cDBValue
+	parent      DB
+	lockVersion interface{}
+
+	cwwMutex
 }
 
-// NOTE: Needed by MultiStore.CacheWrap().
+// Needed by MultiStore.CacheWrap().
 var _ atomicSetDeleter = (*CacheDB)(nil)
 
-func NewCacheDB(parent DB) *CacheDB {
+// Users should typically not be required to call NewCacheDB directly, as the
+// DB implementations here provide a .CacheWrap() function already.
+// `lockVersion` is typically provided by parent.GetWriteLockVersion().
+func NewCacheDB(parent DB, lockVersion interface{}) *CacheDB {
 	db := &CacheDB{
-		cache:  make(map[string]cDBValue),
-		parent: parent,
+		cache:       make(map[string]cDBValue),
+		parent:      parent,
+		lockVersion: lockVersion,
+		cwwMutex:    newCWWMutex(),
 	}
 	return db
 }
@@ -106,6 +115,7 @@ func (db *CacheDB) Stats() map[string]string {
 
 	stats := make(map[string]string)
 	stats["cache.size"] = fmt.Sprintf("%d", len(db.cache))
+	stats["cache.lock_version"] = fmt.Sprintf("%v", db.lockVersion)
 	mergeStats(db.parent.Stats(), stats, "parent.")
 	return stats
 }
@@ -118,10 +128,24 @@ func (db *CacheDB) NewBatch() Batch {
 	return &memBatch{db, nil}
 }
 
-// Commit writes pending updates to the parent database and clears the cache.
-func (db *CacheDB) Commit() {
+// Implements `atomicSetDeleter` for Batch support.
+func (db *CacheDB) Mutex() *sync.Mutex {
+	return &(db.mtx)
+}
+
+// Write writes pending updates to the parent database and clears the cache.
+func (db *CacheDB) Write() {
 	db.mtx.Lock()
 	defer db.mtx.Unlock()
+
+	// Optional sanity check to ensure that CacheDB is valid
+	if parent, ok := db.parent.(WriteLocker); ok {
+		if parent.TryWriteLock(db.lockVersion) {
+			// All good!
+		} else {
+			panic("CacheDB.Write() failed. Did this CacheDB expire?")
+		}
+	}
 
 	// We need a copy of all of the keys.
 	// Not the best, but probably not a bottleneck depending.
@@ -148,10 +172,56 @@ func (db *CacheDB) Commit() {
 	db.cache = make(map[string]cDBValue)
 }
 
-func (db *CacheDB) Mutex() *sync.Mutex {
-	return &(db.mtx)
-}
+//----------------------------------------
+// To CacheWrap this CacheDB further.
 
 func (db *CacheDB) CacheWrap() interface{} {
-	return NewCacheDB(db)
+	return NewCacheDB(db, db.GetWriteLockVersion())
+}
+
+// If the parent parent DB implements this, (e.g. such as a CacheDB parent to a
+// CacheDB child), CacheDB will call `parent.TryWriteLock()` before attempting
+// to write.
+type WriteLocker interface {
+	GetWriteLockVersion() (lockVersion interface{})
+	TryWriteLock(lockVersion interface{}) bool
+}
+
+// Implements TryWriteLocker.  Embed this in DB structs if desired.
+type cwwMutex struct {
+	mtx sync.Mutex
+	// CONTRACT: reading/writing to `*written` should use `atomic.*`.
+	// CONTRACT: replacing `written` with another *int32 should use `.mtx`.
+	written *int32
+}
+
+func newCWWMutex() cwwMutex {
+	return cwwMutex{
+		written: new(int32),
+	}
+}
+
+func (cww *cwwMutex) GetWriteLockVersion() interface{} {
+	cww.mtx.Lock()
+	defer cww.mtx.Unlock()
+
+	// `written` works as a "version" object because it gets replaced upon
+	// successful TryWriteLock.
+	return cww.written
+}
+
+func (cww *cwwMutex) TryWriteLock(version interface{}) bool {
+	cww.mtx.Lock()
+	defer cww.mtx.Unlock()
+
+	if version != cww.written {
+		return false // wrong "WriteLockVersion"
+	}
+	if !atomic.CompareAndSwapInt32(cww.written, 0, 1) {
+		return false // already written
+	}
+
+	// New "WriteLockVersion"
+	cww.written = new(int32)
+	return true
 }

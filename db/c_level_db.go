@@ -22,6 +22,8 @@ type CLevelDB struct {
 	ro     *levigo.ReadOptions
 	wo     *levigo.WriteOptions
 	woSync *levigo.WriteOptions
+
+	cwwMutex
 }
 
 func NewCLevelDB(name string, dir string) (*CLevelDB, error) {
@@ -43,6 +45,8 @@ func NewCLevelDB(name string, dir string) (*CLevelDB, error) {
 		ro:     ro,
 		wo:     wo,
 		woSync: woSync,
+
+		cwwMutex: newCWWMutex(),
 	}
 	return database, nil
 }
@@ -116,7 +120,12 @@ func (db *CLevelDB) Stats() map[string]string {
 	return stats
 }
 
+func (db *CLevelDB) CacheWrap() interface{} {
+	return NewCacheDB(db, db.GetWriteLockVersion())
+}
+
 //----------------------------------------
+// Batch
 
 func (db *CLevelDB) NewBatch() Batch {
 	batch := levigo.NewWriteBatch()
@@ -144,6 +153,7 @@ func (mBatch *cLevelDBBatch) Write() {
 }
 
 //----------------------------------------
+// Iterator
 
 func (db *CLevelDB) Iterator() Iterator {
 	itr := db.db.NewIterator(db.ro)
