@@ -140,7 +140,7 @@ func (db *MemDB) Iterator() Iterator {
 type memDBIterator struct {
 	cur  int
 	keys []string
-	db   *MemDB
+	db   DB
 }
 
 func newMemDBIterator() *memDBIterator {
