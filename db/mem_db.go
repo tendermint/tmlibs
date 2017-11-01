@@ -35,14 +35,6 @@ func (db *MemDB) Get(key []byte) []byte {
 	return db.db[string(key)]
 }
 
-func (db *MemDB) GetOK(key []byte) ([]byte, bool) {
-	db.mtx.Lock()
-	defer db.mtx.Unlock()
-
-	value, ok := db.db[string(key)]
-	return value, ok
-}
-
 func (db *MemDB) Set(key []byte, value []byte) {
 	db.mtx.Lock()
 	defer db.mtx.Unlock()
