@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
 	"sort"
 	"sync"
 
@@ -19,7 +20,7 @@ const (
 
 func init() {
 	registerDBCreator(FSDBBackendStr, func(name string, dir string) (DB, error) {
-		dbPath := path.Join(dir, name+".db")
+		dbPath := filepath.Join(dir, name+".db")
 		return NewFSDB(dbPath), nil
 	}, false)
 }
@@ -72,7 +73,7 @@ func (db *FSDB) SetSync(key []byte, value []byte) {
 	db.SetNoLock(key, value)
 }
 
-// NOTE: Implements atomicSetDeleter
+// NOTE: Implements atomicSetDeleter.
 func (db *FSDB) SetNoLock(key []byte, value []byte) {
 	if value == nil {
 		value = []byte{}
@@ -98,7 +99,7 @@ func (db *FSDB) DeleteSync(key []byte) {
 	db.DeleteNoLock(key)
 }
 
-// NOTE: Implements atomicSetDeleter
+// NOTE: Implements atomicSetDeleter.
 func (db *FSDB) DeleteNoLock(key []byte) {
 	err := remove(string(key))
 	if os.IsNotExist(err) {
@@ -167,8 +168,8 @@ func (db *FSDB) nameToPath(name []byte) string {
 	return path.Join(db.dir, n)
 }
 
-// Read some bytes from a file
-// CONTRACT: returns os errors directly without wrapping
+// Read some bytes to a file.
+// CONTRACT: returns os errors directly without wrapping.
 func read(path string) ([]byte, error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -183,8 +184,8 @@ func read(path string) ([]byte, error) {
 	return d, nil
 }
 
-// Write some bytes from a file
-// CONTRACT: returns os errors directly without wrapping
+// Write some bytes from a file.
+// CONTRACT: returns os errors directly without wrapping.
 func write(path string, d []byte) error {
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, keyPerm)
 	if err != nil {
@@ -192,18 +193,22 @@ func write(path string, d []byte) error {
 	}
 	defer f.Close()
 	_, err = f.Write(d)
+	if err != nil {
+		return err
+	}
+	err = f.Sync()
 	return err
 }
 
-// Remove a file
-// CONTRACT: returns os errors directly without wrapping
+// Remove a file.
+// CONTRACT: returns os errors directly without wrapping.
 func remove(path string) error {
 	return os.Remove(path)
 }
 
 // List files of a path.
 // Paths will NOT include dir as the prefix.
-// CONTRACT: returns os errors directly without wrapping
+// CONTRACT: returns os errors directly without wrapping.
 func list(dirPath string) (paths []string, err error) {
 	dir, err := os.Open(dirPath)
 	if err != nil {
@@ -215,7 +220,7 @@ func list(dirPath string) (paths []string, err error) {
 	for i, name := range names {
 		n, err := url.PathUnescape(name)
 		if err != nil {
-			return nil, errors.New(fmt.Sprintf("Failed to unescape %s while listing", name))
+			return nil, fmt.Errorf("Failed to unescape %s while listing", name)
 		}
 		names[i] = n
 	}
