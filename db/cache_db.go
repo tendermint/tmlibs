@@ -13,6 +13,7 @@ import (
 type cDBValue struct {
 	value   []byte
 	deleted bool
+	dirty   bool
 }
 
 // CacheDB wraps an in-memory cache around an underlying DB.
@@ -45,13 +46,13 @@ func (db *CacheDB) Get(key []byte) []byte {
 	db.mtx.Lock()
 	defer db.mtx.Unlock()
 
-	value, ok := db.cache[string(key)]
+	dbValue, ok := db.cache[string(key)]
 	if !ok {
 		data := db.parent.Get(key)
-		value = cDBValue{value: data}
-		db.cache[string(key)] = value
+		dbValue = cDBValue{value: data, deleted: false, dirty: false}
+		db.cache[string(key)] = dbValue
 	}
-	return value.value
+	return dbValue.value
 }
 
 func (db *CacheDB) Set(key []byte, value []byte) {
@@ -69,7 +70,7 @@ func (db *CacheDB) SetSync(key []byte, value []byte) {
 }
 
 func (db *CacheDB) SetNoLock(key []byte, value []byte) {
-	db.cache[string(key)] = cDBValue{value, false}
+	db.cache[string(key)] = cDBValue{value: value, deleted: false, dirty: true}
 }
 
 func (db *CacheDB) Delete(key []byte) {
@@ -87,7 +88,7 @@ func (db *CacheDB) DeleteSync(key []byte) {
 }
 
 func (db *CacheDB) DeleteNoLock(key []byte) {
-	db.cache[string(key)] = cDBValue{nil, true}
+	db.cache[string(key)] = cDBValue{value: nil, deleted: true, dirty: true}
 }
 
 func (db *CacheDB) Close() {
@@ -150,20 +151,22 @@ func (db *CacheDB) Write() {
 	// We need a copy of all of the keys.
 	// Not the best, but probably not a bottleneck depending.
 	keys := make([]string, 0, len(db.cache))
-	for key := range db.cache {
-		keys = append(keys, key)
+	for key, dbValue := range db.cache {
+		if dbValue.dirty {
+			keys = append(keys, key)
+		}
 	}
 	sort.Strings(keys)
 
 	batch := db.parent.NewBatch()
 	for _, key := range keys {
-		value := db.cache[key]
-		if value.deleted {
+		dbValue := db.cache[key]
+		if dbValue.deleted {
 			batch.Delete([]byte(key))
-		} else if value.value == nil {
+		} else if dbValue.value == nil {
 			// Skip, it already doesn't exist in parent.
 		} else {
-			batch.Set([]byte(key), value.value)
+			batch.Set([]byte(key), dbValue.value)
 		}
 	}
 	batch.Write()

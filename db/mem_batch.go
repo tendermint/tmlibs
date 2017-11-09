@@ -16,8 +16,8 @@ type memBatch struct {
 type opType int
 
 const (
-	opTypeSet    = 1
-	opTypeDelete = 2
+	opTypeSet    opType = 1
+	opTypeDelete opType = 2
 )
 
 type operation struct {

@@ -217,6 +217,9 @@ func list(dirPath string) (paths []string, err error) {
 	defer dir.Close()
 
 	names, err := dir.Readdirnames(0)
+	if err != nil {
+		return nil, err
+	}
 	for i, name := range names {
 		n, err := url.PathUnescape(name)
 		if err != nil {
