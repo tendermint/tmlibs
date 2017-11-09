@@ -87,6 +87,7 @@ const (
 	CLevelDBBackendStr  = "cleveldb"
 	GoLevelDBBackendStr = "goleveldb"
 	MemDBBackendStr     = "memdb"
+	FSDBBackendStr      = "fsdb" // using the filesystem naively
 )
 
 type dbCreator func(name string, dir string) (DB, error)
