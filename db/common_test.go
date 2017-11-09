@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/tendermint/tmlibs/common"
+	cmn "github.com/tendermint/tmlibs/common"
 )
 
 func checkValid(t *testing.T, itr Iterator, expected bool) {
@@ -56,7 +56,7 @@ func checkValuePanics(t *testing.T, itr Iterator) {
 }
 
 func newTempDB(t *testing.T, backend string) (db DB) {
-	dir, dirname := common.Tempdir("test_go_iterator")
+	dir, dirname := cmn.Tempdir("test_go_iterator")
 	db = NewDB("testdb", backend, dirname)
 	dir.Close()
 	return db
