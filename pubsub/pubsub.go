@@ -15,6 +15,7 @@ import (
 	"context"
 
 	cmn "github.com/tendermint/tmlibs/common"
+	"github.com/tendermint/tmlibs/log"
 )
 
 type operation int
@@ -55,9 +56,9 @@ type Option func(*Server)
 // NewServer returns a new server. See the commentary on the Option functions
 // for a detailed description of how to configure buffering. If no options are
 // provided, the resulting server's queue is unbuffered.
-func NewServer(options ...Option) *Server {
+func NewServer(logger log.Logger, options ...Option) *Server {
 	s := &Server{}
-	s.BaseService = *cmn.NewBaseService(nil, "PubSub", s)
+	s.BaseService = *cmn.NewBaseService(logger, "PubSub", s)
 
 	for _, option := range options {
 		option(s)
@@ -90,7 +91,9 @@ func (s Server) BufferCapacity() int {
 // on which messages matching the given query can be received. If the
 // subscription already exists, the old channel will be closed. An error will
 // be returned to the caller if the context is canceled.
-func (s *Server) Subscribe(ctx context.Context, clientID string, query Query, out chan<- interface{}) error {
+func (s *Server) Subscribe(ctx context.Context, clientID string, query Query,
+	out chan<- interface{}) error {
+
 	select {
 	case s.cmds <- cmd{op: sub, clientID: clientID, query: query, ch: out}:
 		return nil
@@ -130,7 +133,9 @@ func (s *Server) Publish(ctx context.Context, msg interface{}) error {
 // PublishWithTags publishes the given message with the set of tags. The set is
 // matched with clients queries. If there is a match, the message is sent to
 // the client.
-func (s *Server) PublishWithTags(ctx context.Context, msg interface{}, tags map[string]interface{}) error {
+func (s *Server) PublishWithTags(ctx context.Context, msg interface{},
+	tags map[string]interface{}) error {
+
 	select {
 	case s.cmds <- cmd{op: pub, msg: msg, tags: tags}:
 		return nil

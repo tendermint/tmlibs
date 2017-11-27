@@ -57,6 +57,7 @@ func RandUint64() uint64 {
 }
 
 func RandUint() uint {
+	// nolint: gas
 	return uint(rand.Int())
 }
 
@@ -73,6 +74,7 @@ func RandInt64() int64 {
 }
 
 func RandInt() int {
+	// nolint: gas
 	return rand.Int()
 }
 

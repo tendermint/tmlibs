@@ -12,8 +12,7 @@ import (
 )
 
 func TestExample(t *testing.T) {
-	s := pubsub.NewServer()
-	s.SetLogger(log.TestingLogger())
+	s := pubsub.NewServer(log.TestingLogger())
 	s.Start()
 	defer s.Stop()
 

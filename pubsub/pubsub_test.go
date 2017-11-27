@@ -20,8 +20,7 @@ const (
 )
 
 func TestSubscribe(t *testing.T) {
-	s := pubsub.NewServer()
-	s.SetLogger(log.TestingLogger())
+	s := pubsub.NewServer(log.TestingLogger())
 	s.Start()
 	defer s.Stop()
 
@@ -39,8 +38,7 @@ func TestSubscribe(t *testing.T) {
 }
 
 func TestDifferentClients(t *testing.T) {
-	s := pubsub.NewServer()
-	s.SetLogger(log.TestingLogger())
+	s := pubsub.NewServer(log.TestingLogger())
 	s.Start()
 	defer s.Stop()
 
@@ -53,24 +51,27 @@ func TestDifferentClients(t *testing.T) {
 	assertReceive(t, "Iceman", ch1)
 
 	ch2 := make(chan interface{}, 1)
-	err = s.Subscribe(ctx, "client-2", query.MustParse("tm.events.type='NewBlock' AND abci.account.name='Igor'"), ch2)
+	err = s.Subscribe(ctx, "client-2",
+		query.MustParse("tm.events.type='NewBlock' AND abci.account.name='Igor'"), ch2)
 	require.NoError(t, err)
-	err = s.PublishWithTags(ctx, "Ultimo", map[string]interface{}{"tm.events.type": "NewBlock", "abci.account.name": "Igor"})
+	err = s.PublishWithTags(ctx, "Ultimo",
+		map[string]interface{}{"tm.events.type": "NewBlock", "abci.account.name": "Igor"})
 	require.NoError(t, err)
 	assertReceive(t, "Ultimo", ch1)
 	assertReceive(t, "Ultimo", ch2)
 
 	ch3 := make(chan interface{}, 1)
-	err = s.Subscribe(ctx, "client-3", query.MustParse("tm.events.type='NewRoundStep' AND abci.account.name='Igor' AND abci.invoice.number = 10"), ch3)
+	err = s.Subscribe(ctx, "client-3",
+		query.MustParse("tm.events.type='NewRoundStep' AND abci.account.name='Igor' AND abci.invoice.number = 10"), ch3)
 	require.NoError(t, err)
-	err = s.PublishWithTags(ctx, "Valeria Richards", map[string]interface{}{"tm.events.type": "NewRoundStep"})
+	err = s.PublishWithTags(ctx, "Valeria Richards",
+		map[string]interface{}{"tm.events.type": "NewRoundStep"})
 	require.NoError(t, err)
 	assert.Zero(t, len(ch3))
 }
 
 func TestClientSubscribesTwice(t *testing.T) {
-	s := pubsub.NewServer()
-	s.SetLogger(log.TestingLogger())
+	s := pubsub.NewServer(log.TestingLogger())
 	s.Start()
 	defer s.Stop()
 
@@ -80,7 +81,8 @@ func TestClientSubscribesTwice(t *testing.T) {
 	ch1 := make(chan interface{}, 1)
 	err := s.Subscribe(ctx, clientID, q, ch1)
 	require.NoError(t, err)
-	err = s.PublishWithTags(ctx, "Goblin Queen", map[string]interface{}{"tm.events.type": "NewBlock"})
+	err = s.PublishWithTags(ctx, "Goblin Queen",
+		map[string]interface{}{"tm.events.type": "NewBlock"})
 	require.NoError(t, err)
 	assertReceive(t, "Goblin Queen", ch1)
 
@@ -97,8 +99,7 @@ func TestClientSubscribesTwice(t *testing.T) {
 }
 
 func TestUnsubscribe(t *testing.T) {
-	s := pubsub.NewServer()
-	s.SetLogger(log.TestingLogger())
+	s := pubsub.NewServer(log.TestingLogger())
 	s.Start()
 	defer s.Stop()
 
@@ -118,8 +119,7 @@ func TestUnsubscribe(t *testing.T) {
 }
 
 func TestUnsubscribeAll(t *testing.T) {
-	s := pubsub.NewServer()
-	s.SetLogger(log.TestingLogger())
+	s := pubsub.NewServer(log.TestingLogger())
 	s.Start()
 	defer s.Stop()
 
@@ -145,8 +145,7 @@ func TestUnsubscribeAll(t *testing.T) {
 }
 
 func TestBufferCapacity(t *testing.T) {
-	s := pubsub.NewServer(pubsub.BufferCapacity(2))
-	s.SetLogger(log.TestingLogger())
+	s := pubsub.NewServer(log.TestingLogger(), pubsub.BufferCapacity(2))
 
 	assert.Equal(t, 2, s.BufferCapacity())
 
@@ -173,7 +172,7 @@ func Benchmark100ClientsOneQuery(b *testing.B)  { benchmarkNClientsOneQuery(100,
 func Benchmark1000ClientsOneQuery(b *testing.B) { benchmarkNClientsOneQuery(1000, b) }
 
 func benchmarkNClients(n int, b *testing.B) {
-	s := pubsub.NewServer()
+	s := pubsub.NewServer(nil)
 	s.Start()
 	defer s.Stop()
 
@@ -184,18 +183,21 @@ func benchmarkNClients(n int, b *testing.B) {
 			for range ch {
 			}
 		}()
-		s.Subscribe(ctx, clientID, query.MustParse(fmt.Sprintf("abci.Account.Owner = 'Ivan' AND abci.Invoices.Number = %d", i)), ch)
+		s.Subscribe(ctx, clientID, query.
+			MustParse(
+				fmt.Sprintf("abci.Account.Owner = 'Ivan' AND abci.Invoices.Number = %d", i)), ch)
 	}
 
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		s.PublishWithTags(ctx, "Gamora", map[string]interface{}{"abci.Account.Owner": "Ivan", "abci.Invoices.Number": i})
+		s.PublishWithTags(ctx, "Gamora",
+			map[string]interface{}{"abci.Account.Owner": "Ivan", "abci.Invoices.Number": i})
 	}
 }
 
 func benchmarkNClientsOneQuery(n int, b *testing.B) {
-	s := pubsub.NewServer()
+	s := pubsub.NewServer(nil)
 	s.Start()
 	defer s.Stop()
 
@@ -213,7 +215,8 @@ func benchmarkNClientsOneQuery(n int, b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		s.PublishWithTags(ctx, "Gamora", map[string]interface{}{"abci.Account.Owner": "Ivan", "abci.Invoices.Number": 1})
+		s.PublishWithTags(ctx, "Gamora",
+			map[string]interface{}{"abci.Account.Owner": "Ivan", "abci.Invoices.Number": 1})
 	}
 }
 
@@ -221,7 +224,9 @@ func benchmarkNClientsOneQuery(n int, b *testing.B) {
 /// HELPERS
 ///////////////////////////////////////////////////////////////////////////////
 
-func assertReceive(t *testing.T, expected interface{}, ch <-chan interface{}, msgAndArgs ...interface{}) {
+func assertReceive(t *testing.T, expected interface{}, ch <-chan interface{},
+	msgAndArgs ...interface{}) {
+
 	select {
 	case actual := <-ch:
 		if actual != nil {

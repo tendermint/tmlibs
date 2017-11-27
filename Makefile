@@ -4,14 +4,16 @@ GOTOOLS = \
 	github.com/Masterminds/glide \
 	github.com/alecthomas/gometalinter
 
-REPO:=github.com/tendermint/tmlibs
-
 all: test
-
-NOVENDOR = go list github.com/tendermint/tmlibs/... | grep -v /vendor/
 
 test:
 	go test `glide novendor`
+
+test_100:
+	for i in {0..100}; do make test; done
+
+test_coverage:
+	./test.sh
 
 get_vendor_deps: ensure_tools
 	@rm -rf vendor/
@@ -45,12 +47,3 @@ metalinter_test: ensure_tools
 		--enable=vetshadow \
 		--enable=vet \
 		./...
-
-		#--enable=aligncheck \
-		#--enable=dupl \
-		#--enable=errcheck \
-		#--enable=gocyclo \
-		#--enable=goimports \
-		#--enable=golint \ <== comments on anything exported
-		#--enable=gotype \
-	   	#--enable=unparam \

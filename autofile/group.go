@@ -15,7 +15,7 @@ import (
 	"sync"
 	"time"
 
-	. "github.com/tendermint/tmlibs/common"
+	cmn "github.com/tendermint/tmlibs/common"
 )
 
 const (
@@ -54,7 +54,7 @@ The Group can also be used to binary-search for some line,
 assuming that marker lines are written occasionally.
 */
 type Group struct {
-	BaseService
+	cmn.BaseService
 
 	ID             string
 	Head           *AutoFile // The head AutoFile to write to
@@ -90,7 +90,7 @@ func OpenGroup(headPath string) (g *Group, err error) {
 		minIndex:       0,
 		maxIndex:       0,
 	}
-	g.BaseService = *NewBaseService(nil, "Group", g)
+	g.BaseService = *cmn.NewBaseService(nil, "Group", g)
 
 	gInfo := g.readGroupInfo()
 	g.minIndex = gInfo.MinIndex
@@ -726,11 +726,11 @@ func (gr *GroupReader) SetIndex(index int) error {
 func MakeSimpleSearchFunc(prefix string, target int) SearchFunc {
 	return func(line string) (int, error) {
 		if !strings.HasPrefix(line, prefix) {
-			return -1, errors.New(Fmt("Marker line did not have prefix: %v", prefix))
+			return -1, errors.New(cmn.Fmt("Marker line did not have prefix: %v", prefix))
 		}
 		i, err := strconv.Atoi(line[len(prefix):])
 		if err != nil {
-			return -1, errors.New(Fmt("Failed to parse marker line: %v", err.Error()))
+			return -1, errors.New(cmn.Fmt("Failed to parse marker line: %v", err.Error()))
 		}
 		if target < i {
 			return 1, nil

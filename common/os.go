@@ -24,6 +24,7 @@ func GoPath() string {
 
 	path := os.Getenv("GOPATH")
 	if len(path) == 0 {
+		// nolint: gas
 		goCmd := exec.Command("go", "env", "GOPATH")
 		out, err := goCmd.Output()
 		if err != nil {

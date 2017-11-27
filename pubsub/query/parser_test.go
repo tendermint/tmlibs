@@ -85,6 +85,7 @@ func TestParser(t *testing.T) {
 		if c.valid {
 			assert.NoError(t, err, "Query was '%s'", c.query)
 		} else {
+			// nolint: vet
 			assert.Error(t, err, "Query was '%s'", c.query)
 		}
 	}

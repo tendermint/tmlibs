@@ -6,6 +6,7 @@ import (
 	"github.com/tendermint/tmlibs/log"
 )
 
+// Service describes something that can be started, stopped and reset.
 type Service interface {
 	Start() (bool, error)
 	OnStart() error
@@ -19,8 +20,6 @@ type Service interface {
 	IsRunning() bool
 
 	String() string
-
-	SetLogger(log.Logger)
 }
 
 /*
@@ -65,17 +64,22 @@ Typical usage:
 		// stop subroutines, etc.
 	}
 */
+
+// BaseService implements Service.
 type BaseService struct {
-	Logger  log.Logger
+	Logger log.Logger
+	Quit   chan struct{}
+
 	name    string
 	started uint32 // atomic
 	stopped uint32 // atomic
-	Quit    chan struct{}
 
 	// The "subclass" of BaseService
 	impl Service
 }
 
+// NewBaseService returns a pointer to a newly instantiated BaseService object.
+// logger can be nil and will then default to a NewNopLogger.
 func NewBaseService(logger log.Logger, name string, impl Service) *BaseService {
 	if logger == nil {
 		logger = log.NewNopLogger()
@@ -89,11 +93,7 @@ func NewBaseService(logger log.Logger, name string, impl Service) *BaseService {
 	}
 }
 
-func (bs *BaseService) SetLogger(l log.Logger) {
-	bs.Logger = l
-}
-
-// Implements Servce
+// Start implements Service
 func (bs *BaseService) Start() (bool, error) {
 	if atomic.CompareAndSwapUint32(&bs.started, 0, 1) {
 		if atomic.LoadUint32(&bs.stopped) == 1 {
@@ -115,12 +115,12 @@ func (bs *BaseService) Start() (bool, error) {
 	}
 }
 
-// Implements Service
+// OnStart implements Service
 // NOTE: Do not put anything in here,
 // that way users don't need to call BaseService.OnStart()
 func (bs *BaseService) OnStart() error { return nil }
 
-// Implements Service
+// Stop implements Service
 func (bs *BaseService) Stop() bool {
 	if atomic.CompareAndSwapUint32(&bs.stopped, 0, 1) {
 		bs.Logger.Info(Fmt("Stopping %v", bs.name), "impl", bs.impl)
@@ -133,12 +133,12 @@ func (bs *BaseService) Stop() bool {
 	}
 }
 
-// Implements Service
+// OnStop implements Service
 // NOTE: Do not put anything in here,
 // that way users don't need to call BaseService.OnStop()
 func (bs *BaseService) OnStop() {}
 
-// Implements Service
+// Reset implements Service
 func (bs *BaseService) Reset() (bool, error) {
 	if !atomic.CompareAndSwapUint32(&bs.stopped, 1, 0) {
 		bs.Logger.Debug(Fmt("Can't reset %v. Not stopped", bs.name), "impl", bs.impl)
@@ -152,24 +152,24 @@ func (bs *BaseService) Reset() (bool, error) {
 	return true, bs.impl.OnReset()
 }
 
-// Implements Service
+// OnReset implements Service
 func (bs *BaseService) OnReset() error {
 	PanicSanity("The service cannot be reset")
 	return nil
 }
 
-// Implements Service
+// IsRunning implements Service
 func (bs *BaseService) IsRunning() bool {
 	return atomic.LoadUint32(&bs.started) == 1 && atomic.LoadUint32(&bs.stopped) == 0
 }
 
-func (bs *BaseService) Wait() {
-	<-bs.Quit
-}
-
-// Implements Servce
+// String implements Servce
 func (bs *BaseService) String() string {
 	return bs.name
+}
+
+func (bs *BaseService) Wait() {
+	<-bs.Quit
 }
 
 //----------------------------------------

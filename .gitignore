@@ -1,5 +1,6 @@
 *.swp
 vendor
 .glide
+coverage.txt
 
 pubsub/query/fuzz_test/output

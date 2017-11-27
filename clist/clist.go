@@ -93,6 +93,7 @@ func (e *CElement) DetachPrev() {
 func (e *CElement) setNextAtomic(next *CElement) {
 	for {
 		oldNext := atomic.LoadPointer(&e.next)
+		// nolint: gas
 		if !atomic.CompareAndSwapPointer(&(e.next), oldNext, unsafe.Pointer(next)) {
 			continue
 		}
@@ -109,6 +110,7 @@ func (e *CElement) setNextAtomic(next *CElement) {
 func (e *CElement) setPrevAtomic(prev *CElement) {
 	for {
 		oldPrev := atomic.LoadPointer(&e.prev)
+		// nolint: gas
 		if !atomic.CompareAndSwapPointer(&(e.prev), oldPrev, unsafe.Pointer(prev)) {
 			continue
 		}
