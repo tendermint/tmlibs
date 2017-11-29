@@ -1,5 +1,6 @@
 package: github.com/tendermint/tmlibs
 import:
+- package: github.com/dgraph-io/badger
 - package: github.com/go-kit/kit
   subpackages:
   - log
@@ -14,7 +15,9 @@ import:
   subpackages:
   - leveldb
   - leveldb/errors
+  - leveldb/iterator
   - leveldb/opt
+  - leveldb/util
 - package: github.com/tendermint/go-wire
   subpackages:
   - data
@@ -26,7 +29,6 @@ import:
 - package: gopkg.in/go-playground/validator.v9
 testImport:
 - package: github.com/stretchr/testify
-  version: ^1.1.4
   subpackages:
   - assert
   - require

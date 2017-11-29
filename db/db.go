@@ -41,6 +41,7 @@ const (
 	CLevelDBBackendStr  = "cleveldb"
 	GoLevelDBBackendStr = "goleveldb"
 	MemDBBackendStr     = "memdb"
+	BadgerDBBackendStr  = "badger"
 )
 
 type dbCreator func(name string, dir string) (DB, error)

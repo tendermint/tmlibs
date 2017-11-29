@@ -1,6 +1,16 @@
-hash: 6efda1f3891a7211fc3dc1499c0079267868ced9739b781928af8e225420f867
-updated: 2017-08-11T20:28:34.550901198Z
+hash: 834046467149739bb34d9933dc8be4a1a2413d2753439847c3e8ff86a30ea47b
+updated: 2017-11-04T05:18:05.644323137Z
 imports:
+- name: github.com/AndreasBriese/bbloom
+  version: 28f7e881ca57bc00e028f9ede9f0d9104cfeef5e
+- name: github.com/dgraph-io/badger
+  version: 6c5c93205b5571967bd2efb350697947ad942221
+  subpackages:
+  - options
+  - protos
+  - skl
+  - table
+  - "y"
 - name: github.com/fsnotify/fsnotify
   version: 4da3e2cfbabc9f751898f250b49f2439785783a1
 - name: github.com/go-kit/kit
@@ -19,6 +29,10 @@ imports:
   version: 71201497bace774495daed26a3874fd339e0b538
 - name: github.com/go-stack/stack
   version: 7a2f19628aabfe68f0766b59e74d6315f8347d22
+- name: github.com/golang/protobuf
+  version: 1643683e1b54a9e88ad26d98f81400c8c9d9f4f9
+  subpackages:
+  - proto
 - name: github.com/golang/snappy
   version: 553a641470496b2327abcac10b36396bd98e45c9
 - name: github.com/hashicorp/hcl
@@ -94,6 +108,12 @@ imports:
   version: 5a033cc77e57eca05bdb50522851d29e03569cbe
   subpackages:
   - ripemd160
+- name: golang.org/x/net
+  version: 01c190206fbdffa42f334f4b2bf2220f50e64920
+  subpackages:
+  - context
+  - internal/timeseries
+  - trace
 - name: golang.org/x/sys
   version: 9ccfe848b9db8435a24c424abbc07a921adf1df5
   subpackages:
