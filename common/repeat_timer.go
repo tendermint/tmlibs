@@ -75,13 +75,12 @@ func (t *RepeatTimer) run() {
 
 // send performs blocking send on t.Ch
 func (t *RepeatTimer) send(tick time.Time) {
-	// XXX: possibly it is better to not block:
+	// Non-blocking. See:
 	// https://golang.org/src/time/sleep.go#L132
-	// select {
-	// case t.output <- tick:
-	// default:
-	// }
-	t.output <- tick
+	select {
+	case t.output <- tick:
+	default:
+	}
 }
 
 // all modifications of the internal state of ThrottleTimer
