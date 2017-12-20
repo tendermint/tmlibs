@@ -3,7 +3,7 @@ package db
 import (
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -12,7 +12,7 @@ import (
 )
 
 func cleanupDBDir(dir, name string) {
-	os.RemoveAll(path.Join(dir, name) + ".db")
+	os.RemoveAll(filepath.Join(dir, name) + ".db")
 }
 
 func testBackendGetSetDelete(t *testing.T, backend string) {
@@ -52,35 +52,92 @@ func TestBackendsGetSetDelete(t *testing.T) {
 	}
 }
 
-func assertPanics(t *testing.T, dbType, name string, fn func()) {
-	defer func() {
-		r := recover()
-		assert.NotNil(t, r, cmn.Fmt("expecting %s.%s to panic", dbType, name))
-	}()
-
-	fn()
+func withDB(t *testing.T, creator dbCreator, fn func(DB)) {
+	name := cmn.Fmt("test_%x", cmn.RandStr(12))
+	db, err := creator(name, "")
+	defer cleanupDBDir("", name)
+	assert.Nil(t, err)
+	fn(db)
+	db.Close()
 }
 
 func TestBackendsNilKeys(t *testing.T) {
-
+  
 	// Test all backends.
 	for dbType, creator := range backends {
+		withDB(t, creator, func(db DB) {
+			t.Run(fmt.Sprintf("Testing %s", dbType), func(t *testing.T) {
 
-		// Setup
-		name := cmn.Fmt("test_%x", cmn.RandStr(12))
-		db, err := creator(name, "")
-		assert.Nil(t, err)
+        // Nil keys are treated as the empty key for most operations.
+				expect := func(key, value []byte) {
+					if len(key) == 0 { // nil or empty
+						assert.Equal(t, db.Get(nil), db.Get([]byte("")))
+						assert.Equal(t, db.Has(nil), db.Has([]byte("")))
+					}
+					assert.Equal(t, db.Get(key), value)
+					assert.Equal(t, db.Has(key), value != nil)
+				}
 
-		assertPanics(t, dbType, "get", func() { db.Get(nil) })
-		assertPanics(t, dbType, "has", func() { db.Has(nil) })
-		assertPanics(t, dbType, "set", func() { db.Set(nil, []byte("abc")) })
-		assertPanics(t, dbType, "setsync", func() { db.SetSync(nil, []byte("abc")) })
-		assertPanics(t, dbType, "delete", func() { db.Delete(nil) })
-		assertPanics(t, dbType, "deletesync", func() { db.DeleteSync(nil) })
+				// Not set
+				expect(nil, nil)
 
-		// Cleanup
-		db.Close()
-		cleanupDBDir("", name)
+				// Set nil value
+				db.Set(nil, nil)
+				expect(nil, []byte(""))
+
+				// Set empty value
+				db.Set(nil, []byte(""))
+				expect(nil, []byte(""))
+
+				// Set nil, Delete nil
+				db.Set(nil, []byte("abc"))
+				expect(nil, []byte("abc"))
+				db.Delete(nil)
+				expect(nil, nil)
+
+				// Set nil, Delete empty
+				db.Set(nil, []byte("abc"))
+				expect(nil, []byte("abc"))
+				db.Delete([]byte(""))
+				expect(nil, nil)
+
+				// Set empty, Delete nil
+				db.Set([]byte(""), []byte("abc"))
+				expect(nil, []byte("abc"))
+				db.Delete(nil)
+				expect(nil, nil)
+
+				// Set empty, Delete empty
+				db.Set([]byte(""), []byte("abc"))
+				expect(nil, []byte("abc"))
+				db.Delete([]byte(""))
+				expect(nil, nil)
+
+				// SetSync nil, DeleteSync nil
+				db.SetSync(nil, []byte("abc"))
+				expect(nil, []byte("abc"))
+				db.DeleteSync(nil)
+				expect(nil, nil)
+
+				// SetSync nil, DeleteSync empty
+				db.SetSync(nil, []byte("abc"))
+				expect(nil, []byte("abc"))
+				db.DeleteSync([]byte(""))
+				expect(nil, nil)
+
+				// SetSync empty, DeleteSync nil
+				db.SetSync([]byte(""), []byte("abc"))
+				expect(nil, []byte("abc"))
+				db.DeleteSync(nil)
+				expect(nil, nil)
+
+				// SetSync empty, DeleteSync empty
+				db.SetSync([]byte(""), []byte("abc"))
+				expect(nil, []byte("abc"))
+				db.DeleteSync([]byte(""))
+				expect(nil, nil)
+			})
+		})
 	}
 }
 

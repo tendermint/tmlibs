@@ -2,14 +2,13 @@ package db
 
 import (
 	"bytes"
-	"strings"
 )
 
 func IteratePrefix(db DB, prefix []byte) Iterator {
 	var start, end []byte
 	if len(prefix) == 0 {
-		start = BeginningKey()
-		end = EndingKey()
+		start = nil
+		end = nil
 	} else {
 		start = cp(prefix)
 		end = cpIncr(prefix)
@@ -36,11 +35,26 @@ func cpIncr(bz []byte) (ret []byte) {
 			ret[i] = byte(0x00)
 		}
 	}
-	return EndingKey()
+	return nil
 }
 
-func checkKeyCondition(key string, start, end []byte) bool {
-	leftCondition := bytes.Equal(start, BeginningKey()) || strings.Compare(key, string(start)) >= 0
-	rightCondition := bytes.Equal(end, EndingKey()) || strings.Compare(key, string(end)) < 0
-	return leftCondition && rightCondition
+// See DB interface documentation for more information.
+func IsKeyInDomain(key, start, end []byte, isReverse bool) bool {
+	if !isReverse {
+		if bytes.Compare(key, start) < 0 {
+			return false
+		}
+		if end != nil && bytes.Compare(end, key) <= 0 {
+			return false
+		}
+		return true
+	} else {
+		if start != nil && bytes.Compare(start, key) < 0 {
+			return false
+		}
+		if end != nil && bytes.Compare(key, end) <= 0 {
+			return false
+		}
+		return true
+	}
 }

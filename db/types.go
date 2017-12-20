@@ -62,16 +62,6 @@ type SetDeleter interface {
 
 //----------------------------------------
 
-// BeginningKey is the smallest key.
-func BeginningKey() []byte {
-	return []byte{}
-}
-
-// EndingKey is the largest key.
-func EndingKey() []byte {
-	return nil
-}
-
 /*
 	Usage:
 
@@ -124,7 +114,8 @@ func bz(s string) []byte {
 	return []byte(s)
 }
 
-// Sometimes we defensively turn nil keys or values into []byte{}.
+// We defensively turn nil keys or values into []byte{} for
+// most operations.
 func nonNilBytes(bz []byte) []byte {
 	if bz == nil {
 		return []byte{}

@@ -3,8 +3,9 @@
 package db
 
 import (
+	"bytes"
 	"fmt"
-	"path"
+	"path/filepath"
 
 	"github.com/jmhodges/levigo"
 )
@@ -27,7 +28,7 @@ type CLevelDB struct {
 }
 
 func NewCLevelDB(name string, dir string) (*CLevelDB, error) {
-	dbPath := path.Join(dir, name+".db")
+	dbPath := filepath.Join(dir, name+".db")
 
 	opts := levigo.NewOptions()
 	opts.SetCache(levigo.NewLRUCache(1 << 30))
@@ -59,8 +60,7 @@ func (db *CLevelDB) Get(key []byte) []byte {
 }
 
 func (db *CLevelDB) Has(key []byte) bool {
-	// key = nonNilBytes(key)
-	panic("not implemented yet")
+	return db.Get(key) != nil
 }
 
 func (db *CLevelDB) Set(key []byte, value []byte) {
@@ -109,7 +109,7 @@ func (db *CLevelDB) Close() {
 }
 
 func (db *CLevelDB) Print() {
-	itr := db.Iterator(BeginningKey(), EndingKey())
+	itr := db.Iterator(nil, nil)
 	defer itr.Close()
 	for ; itr.Valid(); itr.Next() {
 		key := itr.Key()
@@ -160,21 +160,12 @@ func (mBatch *cLevelDBBatch) Write() {
 
 //----------------------------------------
 // Iterator
+// NOTE This is almost identical to db/go_level_db.Iterator
+// Before creating a third version, refactor.
 
 func (db *CLevelDB) Iterator(start, end []byte) Iterator {
 	itr := db.db.NewIterator(db.ro)
-	if len(start) > 0 {
-		itr.Seek(start)
-	} else {
-		itr.SeekToFirst()
-	}
-	return cLevelDBIterator{
-		itr:       itr,
-		start:     start,
-		end:       end,
-		isReverse: false,
-		isInvalid: false,
-	}
+	return newCLevelDBIterator(itr, start, end, false)
 }
 
 func (db *CLevelDB) ReverseIterator(start, end []byte) Iterator {
@@ -190,11 +181,30 @@ type cLevelDBIterator struct {
 	isInvalid  bool
 }
 
+func newCLevelDBIterator(source *levigo.Iterator, start, end []byte, isReverse bool) *cLevelDBIterator {
+	if isReverse {
+		panic("not implemented yet") // XXX
+	}
+	if start != nil {
+		source.Seek(start)
+	} else {
+		source.SeekToFirst()
+	}
+	return &cLevelDBIterator{
+		source:    source,
+		start:     start,
+		end:       end,
+		isReverse: isReverse,
+		isInvalid: false,
+	}
+}
+
 func (itr cLevelDBIterator) Domain() ([]byte, []byte) {
 	return itr.start, itr.end
 }
 
 func (itr cLevelDBIterator) Valid() bool {
+  
 	// Once invalid, forever invalid.
 	if itr.isInvalid {
 		return false
