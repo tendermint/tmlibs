@@ -8,21 +8,23 @@ import (
 // Ticker is a basic ticker interface.
 type Ticker interface {
 	Chan() <-chan time.Time
-	Stop()
+	Stop() bool
 	Reset()
 }
 
 // DefaultTicker wraps the stdlibs Ticker implementation.
 type DefaultTicker struct {
-	t   *time.Ticker
-	dur time.Duration
+	t       *time.Ticker
+	dur     time.Duration
+	stopped bool
 }
 
 // NewDefaultTicker returns a new DefaultTicker
 func NewDefaultTicker(dur time.Duration) *DefaultTicker {
 	return &DefaultTicker{
-		time.NewTicker(dur),
-		dur,
+		t:       time.NewTicker(dur),
+		dur:     dur,
+		stopped: false,
 	}
 }
 
@@ -31,20 +33,29 @@ func (t *DefaultTicker) Chan() <-chan time.Time {
 	return t.t.C
 }
 
-// Implements Ticker
-func (t *DefaultTicker) Stop() {
+// Implements Ticker. Returns true if the ticker is stopped,
+// false if it was already stopped.
+func (t *DefaultTicker) Stop() bool {
+	if t.stopped {
+		return false
+	}
 	t.t.Stop()
-	t.t = nil
+	t.stopped = true
+	return true
 }
 
-// Implements Ticker
+// Implements Ticker.
 func (t *DefaultTicker) Reset() {
+	t.Stop() // ensure it's stopped first
+
 	t.t = time.NewTicker(t.dur)
+	t.stopped = false
 }
 
 // ManualTicker wraps a channel that can be manually sent on
 type ManualTicker struct {
-	ch chan time.Time
+	ch      chan time.Time
+	stopped bool
 }
 
 // NewManualTicker returns a new ManualTicker
@@ -60,13 +71,17 @@ func (t *ManualTicker) Chan() <-chan time.Time {
 }
 
 // Implements Ticker
-func (t *ManualTicker) Stop() {
-	// noop
+func (t *ManualTicker) Stop() bool {
+	if t.stopped {
+		return false
+	}
+	t.stopped = true
+	return true
 }
 
 // Implements Ticker
 func (t *ManualTicker) Reset() {
-	// noop
+	t.stopped = false
 }
 
 //---------------------------------------------------------------------
@@ -141,16 +156,14 @@ func (t *RepeatTimer) Stop() bool {
 	t.mtx.Lock() // Lock
 	defer t.mtx.Unlock()
 
-	exists := t.ticker != nil
-	if exists {
-		t.ticker.Stop() // does not close the channel
+	if t.ticker.Stop() { // does not close the channel
 		select {
-		case <-t.Ch:
-			// read off channel if there's anything there
+		case <-t.Ch: // drain the channel
 		default:
 		}
 		close(t.quit)
 		t.wg.Wait() // must wait for quit to close else we race Reset
+		return true
 	}
-	return exists
+	return false
 }
