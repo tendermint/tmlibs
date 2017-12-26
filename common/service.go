@@ -6,39 +6,30 @@ import (
 	"github.com/tendermint/tmlibs/log"
 )
 
-type Service interface {
-	Start() (bool, error)
+type ServiceCore interface {
 	OnStart() error
+	OnStop() error
+}
 
-	Stop() bool
-	OnStop()
-
-	Reset() (bool, error)
-	OnReset() error
-
+type Service interface {
+	Start() error
+	Stop() error
 	IsRunning() bool
-
 	String() string
-
+	SetServiceCore(ServiceCore)
 	SetLogger(log.Logger)
 }
 
 /*
-Classical-inheritance-style service declarations. Services can be started, then
-stopped, then optionally restarted.
 
-Users can override the OnStart/OnStop methods. In the absence of errors, these
-methods are guaranteed to be called at most once. If OnStart returns an error,
-service won't be marked as started, so the user can call Start again.
+Services can be started, then stopped, then optionally restarted.
 
-A call to Reset will panic, unless OnReset is overwritten, allowing
-OnStart/OnStop to be called again.
+Users can override the OnStart/OnStop methods.
+These methods are guaranteed to be called at most once.
+Starting an already started service will panic.
+Stopping an already stopped (or non-started) service will panic.
 
-The caller must ensure that Start and Stop are not called concurrently.
-
-It is ok to call Stop without calling Start first.
-
-Typical usage:
+Usage:
 
 	type FooService struct {
 		BaseService
@@ -49,7 +40,7 @@ Typical usage:
 		fs := &FooService{
 			// init
 		}
-		fs.BaseService = *NewBaseService(log, "FooService", fs)
+		fs.SetServiceCore(fs) // Kind of like classical inheritance.
 		return fs
 	}
 
