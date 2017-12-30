@@ -4,13 +4,9 @@ import (
 	"testing"
 )
 
-func TestBaseServiceWait(t *testing.T) {
+func TestBaseService(t *testing.T) {
 
-	type TestService struct {
-		BaseService
-	}
-	ts := &TestService{}
-	ts.BaseService = *NewBaseService(nil, "TestService", ts)
+	ts := NewBaseService(nil, "TestService", &testServiceCore{})
 	ts.Start()
 
 	go func() {
@@ -18,7 +14,17 @@ func TestBaseServiceWait(t *testing.T) {
 	}()
 
 	for i := 0; i < 10; i++ {
-		ts.Wait()
+		ts.wait()
 	}
 
+}
+
+type testServiceCore struct{}
+
+func (tc *testServiceCore) OnStart() error {
+	return nil
+}
+
+func (tc *testServiceCore) OnStop() error {
+	return nil
 }
