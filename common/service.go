@@ -6,92 +6,90 @@ import (
 	"github.com/tendermint/tmlibs/log"
 )
 
+// ServiceCore is a service that is implemented by a user.
 type ServiceCore interface {
 	OnStart() error
 	OnStop() error
 }
 
+// Service represents a way to start, stop and get the status of some service. BaseService is the
+// default implementation and should be used by most users.
+// SetServiceCore allows a user to set a ServiceCore. Users should implement their logic using
+// ServiceCore.
 type Service interface {
 	Start() error
 	Stop() error
 	IsRunning() bool
-	String() string
 	SetServiceCore(ServiceCore)
 	SetLogger(log.Logger)
+	String() string
 }
 
 /*
+Services can be started and then stopped.
 
-Services can be started, then stopped, then optionally restarted.
-
-Users can override the OnStart/OnStop methods.
-These methods are guaranteed to be called at most once.
+Users provide an implementation of ServiceCore and BaseService guarantees that OnStart and OnStop
+are called at most once.
 Starting an already started service will panic.
 Stopping an already stopped (or non-started) service will panic.
 
 Usage:
 
-	type FooService struct {
-		BaseService
+	// Implement ServiceCore through OnStart() and OnStop().
+	type FooServiceCore struct {
 		// private fields
 	}
 
-	func NewFooService() *FooService {
-		fs := &FooService{
-			// init
-		}
-		fs.SetServiceCore(fs) // Kind of like classical inheritance.
-		return fs
-	}
-
-	func (fs *FooService) OnStart() error {
-		fs.BaseService.OnStart() // Always call the overridden method.
+	func (fs *FooServiceCore) OnStart() error {
 		// initialize private fields
 		// start subroutines, etc.
 	}
 
-	func (fs *FooService) OnStop() error {
-		fs.BaseService.OnStop() // Always call the overridden method.
+	func (fs *FooServiceCore) OnStop() error {
 		// close/destroy private fields
 		// stop subroutines, etc.
 	}
+
+	fs := NewBaseService(nil, "MyAwesomeService", &FooServiceCore{})
+	fs.Start() // this calls OnStart()
+	fs.Stop() // this calls OnStop()
 */
+
+// BaseService provides the guarantees that a ServiceCore can only be started and stopped once.
 type BaseService struct {
-	Logger  log.Logger
+	logger  log.Logger
 	name    string
 	started uint32 // atomic
 	stopped uint32 // atomic
-	Quit    chan struct{}
+	quit    chan struct{}
 
 	// The "subclass" of BaseService
-	impl Service
+	impl ServiceCore
 }
 
-func NewBaseService(logger log.Logger, name string, impl Service) *BaseService {
+// NewBaseService returns a base service that wraps an implementation of ServiceCore and handles
+// starting and stopping.
+func NewBaseService(logger log.Logger, name string, impl ServiceCore) *BaseService {
 	if logger == nil {
 		logger = log.NewNopLogger()
 	}
 
 	return &BaseService{
-		Logger: logger,
+		logger: logger,
 		name:   name,
-		Quit:   make(chan struct{}),
+		quit:   make(chan struct{}),
 		impl:   impl,
 	}
 }
 
-func (bs *BaseService) SetLogger(l log.Logger) {
-	bs.Logger = l
-}
-
-// Implements Servce
+// Start implements Service
 func (bs *BaseService) Start() (bool, error) {
 	if atomic.CompareAndSwapUint32(&bs.started, 0, 1) {
 		if atomic.LoadUint32(&bs.stopped) == 1 {
-			bs.Logger.Error(Fmt("Not starting %v -- already stopped", bs.name), "impl", bs.impl)
+			bs.logger.Error(Fmt("Not starting %v -- already stopped", bs.name), "impl", bs.impl)
 			return false, nil
 		} else {
-			bs.Logger.Info(Fmt("Starting %v", bs.name), "impl", bs.impl)
+			bs.logger.Info(Fmt("Starting %v", bs.name), "impl", bs.impl)
 		}
 		err := bs.impl.OnStart()
 		if err != nil {
@@ -101,79 +99,44 @@ func (bs *BaseService) Start() (bool, error) {
 		}
 		return true, err
 	} else {
-		bs.Logger.Debug(Fmt("Not starting %v -- already started", bs.name), "impl", bs.impl)
+		bs.logger.Debug(Fmt("Not starting %v -- already started", bs.name), "impl", bs.impl)
 		return false, nil
 	}
 }
 
-// Implements Service
-// NOTE: Do not put anything in here,
-// that way users don't need to call BaseService.OnStart()
-func (bs *BaseService) OnStart() error { return nil }
-
-// Implements Service
+// Stop implements Service
 func (bs *BaseService) Stop() bool {
 	if atomic.CompareAndSwapUint32(&bs.stopped, 0, 1) {
-		bs.Logger.Info(Fmt("Stopping %v", bs.name), "impl", bs.impl)
+		bs.logger.Info(Fmt("Stopping %v", bs.name), "impl", bs.impl)
 		bs.impl.OnStop()
-		close(bs.Quit)
+		close(bs.quit)
 		return true
 	} else {
-		bs.Logger.Debug(Fmt("Stopping %v (ignoring: already stopped)", bs.name), "impl", bs.impl)
+		bs.logger.Debug(Fmt("Stopping %v (ignoring: already stopped)", bs.name), "impl", bs.impl)
 		return false
 	}
 }
 
-// Implements Service
-// NOTE: Do not put anything in here,
-// that way users don't need to call BaseService.OnStop()
-func (bs *BaseService) OnStop() {}
-
-// Implements Service
-func (bs *BaseService) Reset() (bool, error) {
-	if !atomic.CompareAndSwapUint32(&bs.stopped, 1, 0) {
-		bs.Logger.Debug(Fmt("Can't reset %v. Not stopped", bs.name), "impl", bs.impl)
-		return false, nil
-	}
-
-	// whether or not we've started, we can reset
-	atomic.CompareAndSwapUint32(&bs.started, 1, 0)
-
-	bs.Quit = make(chan struct{})
-	return true, bs.impl.OnReset()
-}
-
-// Implements Service
-func (bs *BaseService) OnReset() error {
-	PanicSanity("The service cannot be reset")
-	return nil
-}
-
-// Implements Service
+// IsRunning implements Service
 func (bs *BaseService) IsRunning() bool {
 	return atomic.LoadUint32(&bs.started) == 1 && atomic.LoadUint32(&bs.stopped) == 0
 }
 
-func (bs *BaseService) Wait() {
-	<-bs.Quit
+// SetServiceCore impleents SetServiceCore
+func (bs *BaseService) SetServiceCore(service ServiceCore) {
+	bs.impl = service
 }
 
-// Implements Servce
+// SetLogger implements Service
+func (bs *BaseService) SetLogger(l log.Logger) {
+	bs.logger = l
+}
+
+// String implements Service
 func (bs *BaseService) String() string {
 	return bs.name
 }
 
-//----------------------------------------
-
-type QuitService struct {
-	BaseService
-}
-
-func NewQuitService(logger log.Logger, name string, impl Service) *QuitService {
-	if logger != nil {
-		logger.Info("QuitService is deprecated, use BaseService instead")
-	}
-	return &QuitService{
-		BaseService: *NewBaseService(logger, name, impl),
-	}
+func (bs *BaseService) wait() {
+	<-bs.quit
 }
