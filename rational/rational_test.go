@@ -7,6 +7,7 @@ import (
 
 	asrt "github.com/stretchr/testify/assert"
 	rqr "github.com/stretchr/testify/require"
+	wire "github.com/tendermint/go-wire"
 )
 
 func TestNew(t *testing.T) {
@@ -204,7 +205,7 @@ func TestRound(t *testing.T) {
 	}
 }
 
-func TestSerialization(t *testing.T) {
+func TestSerializationJSON(t *testing.T) {
 	assert, require := asrt.New(t), rqr.New(t)
 
 	r := New(1, 3)
@@ -214,6 +215,21 @@ func TestSerialization(t *testing.T) {
 
 	var rUnmarshal Rat
 	err = json.Unmarshal(rMarshal, &rUnmarshal)
+	require.Nil(err)
+
+	assert.True(r.Equal(rUnmarshal), "original: %v, unmarshalled: %v", r, rUnmarshal)
+}
+
+func TestSerializationGoWire(t *testing.T) {
+	assert, require := asrt.New(t), rqr.New(t)
+
+	r := New(1, 3)
+
+	rMarshal, err := wire.MarshalBinary(r)
+	require.Nil(err)
+
+	var rUnmarshal Rat
+	err = wire.UnmarshalBinary(rMarshal, &rUnmarshal)
 	require.Nil(err)
 
 	assert.True(r.Equal(rUnmarshal), "original: %v, unmarshalled: %v", r, rUnmarshal)
