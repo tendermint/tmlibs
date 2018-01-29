@@ -7,7 +7,6 @@ import (
 
 	asrt "github.com/stretchr/testify/assert"
 	rqr "github.com/stretchr/testify/require"
-	wire "github.com/tendermint/go-wire"
 )
 
 func TestNew(t *testing.T) {
@@ -205,6 +204,20 @@ func TestRound(t *testing.T) {
 	}
 }
 
+func TestZeroSerializationJSON(t *testing.T) {
+	assert := asrt.New(t)
+
+	var r Rat
+	err := json.Unmarshal([]byte("{\"numerator\":0,\"denominator\":1}"), &r)
+	assert.Nil(err)
+	err = json.Unmarshal([]byte("{\"numerator\":0,\"denominator\":0}"), &r)
+	assert.NotNil(err)
+	err = json.Unmarshal([]byte("{\"numerator\":1,\"denominator\":0}"), &r)
+	assert.NotNil(err)
+	err = json.Unmarshal([]byte("{}"), &r)
+	assert.NotNil(err)
+}
+
 func TestSerializationJSON(t *testing.T) {
 	assert, require := asrt.New(t), rqr.New(t)
 
@@ -225,12 +238,59 @@ func TestSerializationGoWire(t *testing.T) {
 
 	r := New(1, 3)
 
-	rMarshal, err := wire.MarshalJSON(r)
+	rMarshal, err := cdc.MarshalJSON(r)
 	require.Nil(err)
 
 	var rUnmarshal Rat
-	err = wire.UnmarshalJSON(rMarshal, &rUnmarshal)
+	err = cdc.UnmarshalJSON(rMarshal, &rUnmarshal)
 	require.Nil(err)
 
 	assert.True(r.Equal(rUnmarshal), "original: %v, unmarshalled: %v", r, rUnmarshal)
+}
+
+type testEmbedStruct struct {
+	Field1 string `json:"f1"`
+	Field2 int    `json:"f2"`
+	Field3 Rat    `json:"f3"`
+}
+
+func TestEmbeddedStructSerializationGoWire(t *testing.T) {
+	assert, require := asrt.New(t), rqr.New(t)
+
+	r := testEmbedStruct{"foo", 10, New(1, 3)}
+
+	rMarshal, err := cdc.MarshalJSON(r)
+	require.Nil(err)
+
+	var rUnmarshal testEmbedStruct
+	err = cdc.UnmarshalJSON(rMarshal, &rUnmarshal)
+	require.Nil(err)
+
+	assert.Equal(r.Field1, rUnmarshal.Field1)
+	assert.Equal(r.Field2, rUnmarshal.Field2)
+	assert.True(r.Field3.Equal(rUnmarshal.Field3), "original: %v, unmarshalled: %v", r, rUnmarshal)
+
+}
+
+type testEmbedInterface struct {
+	Field1 string   `json:"f1"`
+	Field2 int      `json:"f2"`
+	Field3 Rational `json:"f3"`
+}
+
+func TestEmbeddedInterfaceSerializationGoWire(t *testing.T) {
+	assert, require := asrt.New(t), rqr.New(t)
+
+	r := testEmbedInterface{"foo", 10, New(1, 3)}
+
+	rMarshal, err := cdc.MarshalJSON(r)
+	require.Nil(err)
+
+	var rUnmarshal testEmbedInterface
+	err = cdc.UnmarshalJSON(rMarshal, &rUnmarshal)
+	require.Nil(err)
+
+	assert.Equal(r.Field1, rUnmarshal.Field1)
+	assert.Equal(r.Field2, rUnmarshal.Field2)
+	assert.True(r.Field3.Equal(rUnmarshal.Field3), "original: %v, unmarshalled: %v", r, rUnmarshal)
 }
