@@ -208,19 +208,23 @@ func (t *RepeatTimer) stop() {
 		panic("Tried to stop a stopped RepeatTimer")
 	}
 	t.ticker.Stop()
-	t.ticker = nil
-	/*
-		XXX
-		From https://golang.org/pkg/time/#Ticker:
-		"Stop the ticker to release associated resources"
-		"After Stop, no more ticks will be sent"
-		So we shouldn't have to do the below.
 
-		select {
-		case <-t.ch:
-			// read off channel if there's anything there
-		default:
-		}
-	*/
+	// first we drain send channel
+	drain(t.ticker.Chan())
+	// then we drain receive channel
+	drain(t.ch)
+	// then we can safely quit
 	close(t.quit)
+
+	t.ticker = nil
+}
+
+func drain(ch <-chan time.Time) {
+	for {
+		select {
+		case <-ch:
+		default:
+			return
+		}
+	}
 }
