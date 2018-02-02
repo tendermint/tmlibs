@@ -78,18 +78,18 @@ func NewFromDecimal(decimalStr string) (f Rat, err error) {
 	switch len(str) {
 	case 1:
 		if len(str[0]) == 0 {
-			return f, fmt.Errorf("not a decimal string")
+			return f, errors.New("not a decimal string")
 		}
 		numStr = str[0]
 	case 2:
 		if len(str[0]) == 0 || len(str[1]) == 0 {
-			return f, fmt.Errorf("not a decimal string")
+			return f, errors.New("not a decimal string")
 		}
 		numStr = str[0] + str[1]
 		len := int64(len(str[1]))
 		denom = new(big.Int).Exp(big.NewInt(10), big.NewInt(len), nil).Int64()
 	default:
-		return f, fmt.Errorf("not a decimal string")
+		return f, errors.New("not a decimal string")
 	}
 
 	num, err := strconv.Atoi(numStr)
@@ -166,28 +166,6 @@ func (r Rat) Round(precisionFactor int64) Rational {
 	return Rat{big.NewRat(rTen.Evaluate(), precisionFactor)}
 }
 
-//// Old Reference code
-//func (r Rat) Evaluate() int64 {
-//num := r.Num()
-//denom := r.Denom()
-//d := num / denom // always drops the decimal
-//if num%denom == 0 {
-//return d
-//}
-//// evaluate the remainder using bankers rounding
-//remainderDigit := (num * 10 / denom) - (d * 10) // get the first remainder digit
-//isFinalDigit := (num*10%denom == 0)             // is this the final digit in the remainder?
-//switch {
-//case isFinalDigit && (remainderDigit == 5 || remainderDigit == -5):
-//return d + (d % 2) // always rounds to the even number
-//case remainderDigit >= 5:
-//d++
-//case remainderDigit <= -5:
-//d--
-//}
-//return d
-//}
-
 //___________________________________________________________________________________
 
 //TODO there has got to be a better way using native MarshalText and UnmarshalText
@@ -206,8 +184,8 @@ func (r Rat) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON - custom implementation of JSON Unmarshal
 func (r *Rat) UnmarshalJSON(data []byte) (err error) {
 	defer func() {
-		if recover() != nil {
-			err = errors.New("divide by zero error during Unmarshal")
+		if r := recover(); r != nil {
+			err = fmt.Errorf("error during unmarshal, %v", r)
 		}
 	}()
 
