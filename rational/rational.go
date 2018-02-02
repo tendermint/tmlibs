@@ -184,8 +184,8 @@ func (r Rat) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON - custom implementation of JSON Unmarshal
 func (r *Rat) UnmarshalJSON(data []byte) (err error) {
 	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("error during unmarshal, %v", r)
+		if rcv := recover(); rcv != nil {
+			err = fmt.Errorf("Panic during UnmarshalJSON: %v", rcv)
 		}
 	}()
 
