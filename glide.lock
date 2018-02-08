@@ -76,7 +76,7 @@ imports:
   - leveldb/table
   - leveldb/util
 - name: github.com/tendermint/go-wire
-  version: 7069a6e09d6a5e94accc0cebd077052d2faf1ff8
+  version: 62229e240c992258cc695ffa59a62f5efe4e7ea2
 - name: golang.org/x/crypto
   version: edd5e9b0879d13ee6970a50153d85b8fec9f7686
   subpackages:
