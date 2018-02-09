@@ -155,7 +155,11 @@ func (t *RepeatTimer) fireRoutine(ch <-chan time.Time, quit <-chan struct{}) {
 	for {
 		select {
 		case t_ := <-ch:
-			t.ch <- t_
+			select {
+			case t.ch <- t_:
+			case <-quit:
+				return
+			}
 		case <-quit: // NOTE: `t.quit` races.
 			return
 		}
@@ -208,23 +212,18 @@ func (t *RepeatTimer) stop() {
 		panic("Tried to stop a stopped RepeatTimer")
 	}
 	t.ticker.Stop()
-
-	// first we drain send channel
-	drain(t.ticker.Chan())
-	// then we drain receive channel
-	drain(t.ch)
-	// then we can safely quit
-	close(t.quit)
-
 	t.ticker = nil
-}
+	/*
+		From https://golang.org/pkg/time/#Ticker:
+		"Stop the ticker to release associated resources"
+		"After Stop, no more ticks will be sent"
+		So we shouldn't have to do the below.
 
-func drain(ch <-chan time.Time) {
-	for {
 		select {
-		case <-ch:
+		case <-t.ch:
+			// read off channel if there's anything there
 		default:
-			return
 		}
-	}
+	*/
+	close(t.quit)
 }
