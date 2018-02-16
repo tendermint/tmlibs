@@ -26,6 +26,8 @@ import:
   - leveldb/errors
   - leveldb/iterator
   - leveldb/opt
+- package: github.com/tendermint/go-wire
+  version: sdk2-marshalJSON-disambiguated
 - package: golang.org/x/crypto
   subpackages:
   - ripemd160
