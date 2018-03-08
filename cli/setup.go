@@ -8,9 +8,11 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
 
+//nolint
 const (
 	HomeFlag     = "home"
 	TraceFlag    = "trace"
@@ -29,8 +31,16 @@ func PrepareBaseCmd(cmd *cobra.Command, envPrefix, defaultHome string) Executor 
 	cobra.OnInitialize(func() { initEnv(envPrefix) })
 	cmd.PersistentFlags().StringP(HomeFlag, "", defaultHome, "directory for config and data")
 	cmd.PersistentFlags().Bool(TraceFlag, false, "print out full stack trace on errors")
-	cmd.PersistentPreRunE = concatCobraCmdFuncs(bindFlagsLoadViper, cmd.PersistentPreRunE)
+	cmd.PersistentPreRunE = concatCobraCmdFuncs(bindFlagsLoadViperCmd, cmd.PersistentPreRunE)
 	return Executor{cmd, os.Exit}
+}
+
+// PrepareBaseREST same functionality as PrepareBaseCmd but for REST server (doesn't use cmd)
+func PrepareBaseRest(flags *pflag.FlagSet, envPrefix, defaultHome string) {
+	flags.StringP(HomeFlag, "", defaultHome, "directory for config and data")
+	flags.Bool(TraceFlag, false, "print out full stack trace on errors")
+	initEnv(envPrefix)
+	bindFlagsLoadViper(flags)
 }
 
 // PrepareMainCmd is meant for client side libs that want some more flags
@@ -77,6 +87,7 @@ type Executor struct {
 	Exit func(int) // this is os.Exit by default, override in tests
 }
 
+// Interface for has ExitCode
 type ExitCoder interface {
 	ExitCode() int
 }
@@ -121,10 +132,14 @@ func concatCobraCmdFuncs(fs ...cobraCmdFunc) cobraCmdFunc {
 	}
 }
 
+func bindFlagsLoadViperCmd(cmd *cobra.Command, args []string) error {
+	return bindFlagsLoadViper(cmd.Flags())
+}
+
 // Bind all flags and read the config into viper
-func bindFlagsLoadViper(cmd *cobra.Command, args []string) error {
+func bindFlagsLoadViper(flags *pflag.FlagSet) error {
 	// cmd.Flags() includes flags from this command and all persistent flags from the parent
-	if err := viper.BindPFlags(cmd.Flags()); err != nil {
+	if err := viper.BindPFlags(flags); err != nil {
 		return err
 	}
 
