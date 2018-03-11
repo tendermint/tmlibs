@@ -126,30 +126,42 @@ func MustWriteFile(filePath string, contents []byte, mode os.FileMode) {
 
 // WriteFileAtomic writes newBytes to temp and atomically moves to filePath
 // when everything else succeeds.
-func WriteFileAtomic(filePath string, newBytes []byte, mode os.FileMode) error {
+func WriteFileAtomic(filePath string, newBytes []byte, mode os.FileMode) (err error) {
 	dir := filepath.Dir(filePath)
 	f, err := ioutil.TempFile(dir, "")
 	if err != nil {
 		return err
 	}
-	_, err = f.Write(newBytes)
-	if err == nil {
-		err = f.Sync()
+
+	defer func() {
+		// Any error should result in full cleanup.
+		// See Issue https://github.com/tendermint/tmlibs/issues/159
+		if err != nil {
+			// If the file happens to be open, let's close it
+			// lest be hung up on it such as on Windows
+			// where we need to first close before removing
+			// See Issue https://github.com/golang/go/issues/16296.
+			if f != nil {
+				_ = f.Close()
+			}
+			os.Remove(f.Name())
+		}
+	}()
+
+	if _, err = f.Write(newBytes); err != nil {
+		return
 	}
-	if closeErr := f.Close(); err == nil {
-		err = closeErr
+	if err = f.Sync(); err != nil {
+		return
 	}
-	if permErr := os.Chmod(f.Name(), mode); err == nil {
-		err = permErr
+	if err = f.Close(); err != nil {
+		return
 	}
-	if err == nil {
-		err = os.Rename(f.Name(), filePath)
+	if err = os.Chmod(f.Name(), mode); err != nil {
+		return
 	}
-	// any err should result in full cleanup
-	if err != nil {
-		os.Remove(f.Name())
-	}
-	return err
+	err = os.Rename(f.Name(), filePath)
+	return
 }
 
 //--------------------------------------------------------------------------------
