@@ -9,6 +9,11 @@ import (
 	cmn "github.com/tendermint/tmlibs/common"
 )
 
+func checkValue(t *testing.T, db DB, key []byte, valueWanted []byte) {
+	valueGot := db.Get(key)
+	assert.Equal(t, valueWanted, valueGot)
+}
+
 func checkValid(t *testing.T, itr Iterator, expected bool) {
 	valid := itr.Valid()
 	require.Equal(t, expected, valid)
@@ -46,7 +51,7 @@ func checkValuePanics(t *testing.T, itr Iterator) {
 }
 
 func newTempDB(t *testing.T, backend DBBackendType) (db DB) {
-	dir, dirname := cmn.Tempdir("test_go_iterator")
+	dir, dirname := cmn.Tempdir("db_common_test")
 	db = NewDB("testdb", backend, dirname)
 	dir.Close()
 	return db
