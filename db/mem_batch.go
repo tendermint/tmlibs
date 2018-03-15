@@ -37,29 +37,34 @@ func (mBatch *memBatch) Delete(key []byte) {
 }
 
 func (mBatch *memBatch) Write() {
-	mBatch.WriteSync()
+	mBatch.write(false)
 }
 
 func (mBatch *memBatch) WriteSync() {
+	mBatch.write(true)
+}
+
+func (mBatch *memBatch) write(doSync bool) {
 	mtx := mBatch.db.Mutex()
 	mtx.Lock()
 	defer mtx.Unlock()
 
 	for i, op := range mBatch.ops {
-		if i < len(mBatch.ops) {
-			switch op.opType {
-			case opTypeSet:
-				mBatch.db.SetNoLock(op.key, op.value)
-			case opTypeDelete:
-				mBatch.db.DeleteNoLock(op.key)
-			}
-		} else {
+		if doSync && i == (len(mBatch.ops)-1) {
 			switch op.opType {
 			case opTypeSet:
 				mBatch.db.SetNoLockSync(op.key, op.value)
 			case opTypeDelete:
 				mBatch.db.DeleteNoLockSync(op.key)
 			}
+			break // we're done.
 		}
+		switch op.opType {
+		case opTypeSet:
+			mBatch.db.SetNoLock(op.key, op.value)
+		case opTypeDelete:
+			mBatch.db.DeleteNoLock(op.key)
+		}
+
 	}
 }
