@@ -1,5 +1,10 @@
 # Changelog
 
+## Non-released
+
+IMPROVEMENTS:
+ - [cli] setup.go now works for REST setup
+
 ## 0.7.0 (February 20, 2018)
 
 BREAKING:
