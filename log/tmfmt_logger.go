@@ -32,7 +32,23 @@ var tmfmtEncoderPool = sync.Pool{
 
 type tmfmtLogger struct {
 	w io.Writer
+
+	noTimePrefixing bool
 }
+
+type LoggerOption interface {
+	with(*tmfmtLogger)
+}
+
+type timePrefixDisabler int
+
+var _ LoggerOption = (*timePrefixDisabler)(nil)
+
+func (tfd timePrefixDisabler) with(tfl *tmfmtLogger) {
+	tfl.noTimePrefixing = true
+}
+
+const OptionDisableTimePrefix = timePrefixDisabler(1)
 
 // NewTMFmtLogger returns a logger that encodes keyvals to the Writer in
 // Tendermint custom format. Note complex types (structs, maps, slices)
@@ -41,8 +57,12 @@ type tmfmtLogger struct {
 // Each log event produces no more than one call to w.Write.
 // The passed Writer must be safe for concurrent use by multiple goroutines if
 // the returned Logger will be used concurrently.
-func NewTMFmtLogger(w io.Writer) kitlog.Logger {
-	return &tmfmtLogger{w}
+func NewTMFmtLogger(w io.Writer, opts ...LoggerOption) kitlog.Logger {
+	tfl := &tmfmtLogger{w: w}
+	for _, opt := range opts {
+		opt.with(tfl)
+	}
+	return tfl
 }
 
 func (l tmfmtLogger) Log(keyvals ...interface{}) error {
@@ -90,7 +110,17 @@ func (l tmfmtLogger) Log(keyvals ...interface{}) error {
 	//     D										- first character of the level, uppercase (ASCII only)
 	//     [05-02|11:06:44.322] - our time format (see https://golang.org/src/time/format.go)
 	//     Stopping ...					- message
-	enc.buf.WriteString(fmt.Sprintf("%c[%s] %-44s ", lvl[0]-32, time.Now().UTC().Format("01-02|15:04:05.000"), msg))
+	if l.noTimePrefixing {
+		// 65 for print width because for the case where we print the time prefix:
+		// a) 1 byte for: %c
+		// b) 1 byte for: [
+		// c) 18 bytes for: time in 01-02|15:04:05.000
+		// d) 1 byte for: ' '
+		// e) 44 bytes for: -44s formatting
+		enc.buf.WriteString(fmt.Sprintf("%-65s ", msg))
+	} else {
+		enc.buf.WriteString(fmt.Sprintf("%c[%s] %-44s ", lvl[0]-32, time.Now().UTC().Format("01-02|15:04:05.000"), msg))
+	}
 
 	if module != unknown {
 		enc.buf.WriteString("module=" + module + " ")

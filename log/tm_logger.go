@@ -24,7 +24,7 @@ var _ Logger = (*tmLogger)(nil)
 // NewTMTermLogger returns a logger that encodes msg and keyvals to the Writer
 // using go-kit's log as an underlying logger and our custom formatter. Note
 // that underlying logger could be swapped with something else.
-func NewTMLogger(w io.Writer) Logger {
+func NewTMLogger(w io.Writer, opts ...LoggerOption) Logger {
 	// Color by level value
 	colorFn := func(keyvals ...interface{}) term.FgBgColor {
 		if keyvals[0] != kitlevel.Key() {
@@ -39,14 +39,19 @@ func NewTMLogger(w io.Writer) Logger {
 			return term.FgBgColor{}
 		}
 	}
+	return &tmLogger{term.NewLogger(w, kitLoggerCreator(opts...), colorFn)}
+}
 
-	return &tmLogger{term.NewLogger(w, NewTMFmtLogger, colorFn)}
+func kitLoggerCreator(opts ...LoggerOption) func(w io.Writer) kitlog.Logger {
+	return func(w io.Writer) kitlog.Logger {
+		return NewTMFmtLogger(w, opts...)
+	}
 }
 
 // NewTMLoggerWithColorFn allows you to provide your own color function. See
 // NewTMLogger for documentation.
-func NewTMLoggerWithColorFn(w io.Writer, colorFn func(keyvals ...interface{}) term.FgBgColor) Logger {
-	return &tmLogger{term.NewLogger(w, NewTMFmtLogger, colorFn)}
+func NewTMLoggerWithColorFn(w io.Writer, colorFn func(keyvals ...interface{}) term.FgBgColor, opts ...LoggerOption) Logger {
+	return &tmLogger{term.NewLogger(w, kitLoggerCreator(opts...), colorFn)}
 }
 
 // Info logs a message at level Info.
