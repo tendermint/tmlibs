@@ -13,7 +13,7 @@ func TestParallel(t *testing.T) {
 
 	// Create tasks.
 	var counter = new(int32)
-	var tasks = make([]Task, 1000*1000)
+	var tasks = make([]Task, 100*1000)
 	for i := 0; i < len(tasks); i++ {
 		tasks[i] = func(i int) (res interface{}, err error, abort bool) {
 			atomic.AddInt32(counter, 1)
