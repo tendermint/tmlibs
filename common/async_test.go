@@ -48,10 +48,10 @@ func TestParallel(t *testing.T) {
 
 func TestParallelAbort(t *testing.T) {
 
-	var flow1 = make(chan struct{})
-	var flow2 = make(chan struct{})
-	var flow3 = make(chan struct{})
-	var flow4 = make(chan struct{})
+	var flow1 = make(chan struct{}, 1)
+	var flow2 = make(chan struct{}, 1)
+	var flow3 = make(chan struct{}, 1) // Cap must be > 0 to prevent blocking.
+	var flow4 = make(chan struct{}, 1)
 
 	// Create tasks.
 	var tasks = []Task{
@@ -67,7 +67,7 @@ func TestParallelAbort(t *testing.T) {
 		},
 		func(i int) (res interface{}, err error, abort bool) {
 			assert.Equal(t, i, 2)
-			go func() { flow3 <- <-flow2 }() // Don't block flow4!
+			flow3 <- <-flow2
 			return 2, nil, true
 		},
 		func(i int) (res interface{}, err error, abort bool) {
