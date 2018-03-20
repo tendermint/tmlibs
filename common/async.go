@@ -29,9 +29,10 @@ func Parallel(tasks ...Task) []TaskResultCh {
 		taskResultChz[i] = taskResultCh
 		go func(i int, task Task, taskResultCh chan TaskResult) {
 			// Recovery
-			go func() {
+			defer func() {
 				if pnk := recover(); pnk != nil {
 					taskResultCh <- TaskResult{nil, nil, pnk}
+					taskDoneCh <- false
 				}
 			}()
 			// Run the task.

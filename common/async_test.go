@@ -114,7 +114,7 @@ func TestParallelRecover(t *testing.T) {
 	// Verify task #0, #1, #2.
 	waitFor(t, taskResultChz[0], "Task #0", 0, nil, nil)
 	waitFor(t, taskResultChz[1], "Task #1", 1, errors.New("some error"), nil)
-	waitFor(t, taskResultChz[2], "Task #2", 2, nil, 2)
+	waitFor(t, taskResultChz[2], "Task #2", nil, nil, 2)
 }
 
 // Wait for result
