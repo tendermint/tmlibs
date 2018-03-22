@@ -6,25 +6,13 @@ import (
 	"strings"
 )
 
-// Fmt shorthand, XXX DEPRECATED
-var Fmt = fmt.Sprintf
-
-// RightPadString adds spaces to the right of a string to make it length totalLength
-func RightPadString(s string, totalLength int) string {
-	remaining := totalLength - len(s)
-	if remaining > 0 {
-		s = s + strings.Repeat(" ", remaining)
+// Like fmt.Sprintf, but skips formatting if args are empty.
+var Fmt = func(format string, a ...interface{}) string {
+	if len(a) == 0 {
+		return format
+	} else {
+		return fmt.Sprintf(format, a...)
 	}
-	return s
-}
-
-// LeftPadString adds spaces to the left of a string to make it length totalLength
-func LeftPadString(s string, totalLength int) string {
-	remaining := totalLength - len(s)
-	if remaining > 0 {
-		s = strings.Repeat(" ", remaining) + s
-	}
-	return s
 }
 
 // IsHex returns true for non-empty hex-string prefixed with "0x"
