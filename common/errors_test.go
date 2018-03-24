@@ -26,7 +26,7 @@ func TestErrorPanic(t *testing.T) {
 	var err = capturePanic()
 
 	assert.Equal(t, pnk{"something"}, err.Cause())
-	assert.Equal(t, pnk{"something"}, err.Type())
+	assert.Equal(t, pnk{"something"}, err.T())
 	assert.Equal(t, "This is the message in ErrorWrap(r, message).", err.Message())
 	assert.Equal(t, "Error{`This is the message in ErrorWrap(r, message).`}", fmt.Sprintf("%v", err))
 	assert.Contains(t, fmt.Sprintf("%#v", err), "Message: This is the message in ErrorWrap(r, message).")
@@ -38,7 +38,7 @@ func TestErrorWrapSomething(t *testing.T) {
 	var err = ErrorWrap("something", "formatter%v%v", 0, 1)
 
 	assert.Equal(t, "something", err.Cause())
-	assert.Equal(t, "something", err.Type())
+	assert.Equal(t, "something", err.T())
 	assert.Equal(t, "formatter01", err.Message())
 	assert.Equal(t, "Error{`formatter01`}", fmt.Sprintf("%v", err))
 	assert.Regexp(t, `Message: formatter01\n`, fmt.Sprintf("%#v", err))
@@ -50,7 +50,7 @@ func TestErrorWrapNothing(t *testing.T) {
 	var err = ErrorWrap(nil, "formatter%v%v", 0, 1)
 
 	assert.Equal(t, nil, err.Cause())
-	assert.Equal(t, nil, err.Type())
+	assert.Equal(t, nil, err.T())
 	assert.Equal(t, "formatter01", err.Message())
 	assert.Equal(t, "Error{`formatter01`}", fmt.Sprintf("%v", err))
 	assert.Regexp(t, `Message: formatter01\n`, fmt.Sprintf("%#v", err))
@@ -62,7 +62,7 @@ func TestErrorNewError(t *testing.T) {
 	var err = NewError("formatter%v%v", 0, 1)
 
 	assert.Equal(t, nil, err.Cause())
-	assert.Equal(t, "formatter%v%v", err.Type())
+	assert.Equal(t, "formatter%v%v", err.T())
 	assert.Equal(t, "formatter01", err.Message())
 	assert.Equal(t, "Error{`formatter01`}", fmt.Sprintf("%v", err))
 	assert.Regexp(t, `Message: formatter01\n`, fmt.Sprintf("%#v", err))
@@ -74,7 +74,7 @@ func TestErrorNewErrorWithStacktrace(t *testing.T) {
 	var err = NewError("formatter%v%v", 0, 1).Stacktrace()
 
 	assert.Equal(t, nil, err.Cause())
-	assert.Equal(t, "formatter%v%v", err.Type())
+	assert.Equal(t, "formatter%v%v", err.T())
 	assert.Equal(t, "formatter01", err.Message())
 	assert.Equal(t, "Error{`formatter01`}", fmt.Sprintf("%v", err))
 	assert.Regexp(t, `Message: formatter01\n`, fmt.Sprintf("%#v", err))
@@ -89,7 +89,7 @@ func TestErrorNewErrorWithTrace(t *testing.T) {
 	err.Trace("trace %v", 3)
 
 	assert.Equal(t, nil, err.Cause())
-	assert.Equal(t, "formatter%v%v", err.Type())
+	assert.Equal(t, "formatter%v%v", err.T())
 	assert.Equal(t, "formatter01", err.Message())
 	assert.Equal(t, "Error{`formatter01`}", fmt.Sprintf("%v", err))
 	assert.Regexp(t, `Message: formatter01\n`, fmt.Sprintf("%#v", err))
