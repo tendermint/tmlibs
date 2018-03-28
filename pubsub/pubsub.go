@@ -137,18 +137,20 @@ func (s *Server) Subscribe(ctx context.Context, clientID string, query Query, ou
 // returned to the caller if the context is canceled or if subscription does
 // not exist.
 func (s *Server) Unsubscribe(ctx context.Context, clientID string, query Query) error {
+	var origQuery Query
 	s.mtx.RLock()
 	clientSubscriptions, ok := s.subscriptions[clientID]
 	if ok {
-		_, ok = clientSubscriptions[query.String()]
+		origQuery, ok = clientSubscriptions[query.String()]
 	}
 	s.mtx.RUnlock()
 	if !ok {
 		return ErrSubscriptionNotFound
 	}
 
+	// original query is used here because we're using pointers as map keys
 	select {
-	case s.cmds <- cmd{op: unsub, clientID: clientID, query: query}:
+	case s.cmds <- cmd{op: unsub, clientID: clientID, query: origQuery}:
 		s.mtx.Lock()
 		delete(clientSubscriptions, query.String())
 		s.mtx.Unlock()
