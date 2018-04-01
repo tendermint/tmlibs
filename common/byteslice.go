@@ -47,6 +47,10 @@ func TrimmedString(b []byte) string {
 }
 
 func PrefixEndBytes(prefix []byte) []byte {
+	if prefix == nil {
+		return nil
+	}
+
 	end := make([]byte, len(prefix))
 	copy(end, prefix)
 	finished := false
