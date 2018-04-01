@@ -45,3 +45,23 @@ func TrimmedString(b []byte) string {
 	return string(bytes.TrimLeft(b, trimSet))
 
 }
+
+func PrefixEndBytes(prefix []byte) []byte {
+	end := make([]byte, len(prefix))
+	copy(end, prefix)
+	finished := false
+
+	for !finished {
+		if end[len(end)-1] != byte(255) {
+			end[len(end)-1]++
+			finished = true
+		} else {
+			end = end[:len(end)-1]
+			if len(end) == 0 {
+				end = nil
+				finished = true
+			}
+		}
+	}
+	return end
+}
