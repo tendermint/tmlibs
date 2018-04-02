@@ -46,6 +46,8 @@ func TrimmedString(b []byte) string {
 
 }
 
+// PrefixEndBytes returns the end byteslice for a noninclusive range
+// that would include all byte slices for which the input is the prefix
 func PrefixEndBytes(prefix []byte) []byte {
 	if prefix == nil {
 		return nil
