@@ -162,24 +162,24 @@ func (mdb *mockDB) Stats() map[string]string {
 
 type mockIterator struct{}
 
-func (_ mockIterator) Domain() (start []byte, end []byte) {
+func (mockIterator) Domain() (start []byte, end []byte) {
 	return nil, nil
 }
 
-func (_ mockIterator) Valid() bool {
+func (mockIterator) Valid() bool {
 	return false
 }
 
-func (_ mockIterator) Next() {
+func (mockIterator) Next() {
 }
 
-func (_ mockIterator) Key() []byte {
+func (mockIterator) Key() []byte {
 	return nil
 }
 
-func (_ mockIterator) Value() []byte {
+func (mockIterator) Value() []byte {
 	return nil
 }
 
-func (_ mockIterator) Close() {
+func (mockIterator) Close() {
 }
