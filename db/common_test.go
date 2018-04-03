@@ -82,73 +82,73 @@ func (mdb *mockDB) Mutex() *sync.Mutex {
 }
 
 func (mdb *mockDB) Get([]byte) []byte {
-	mdb.calls["Get"] += 1
+	mdb.calls["Get"]++
 	return nil
 }
 
 func (mdb *mockDB) Has([]byte) bool {
-	mdb.calls["Has"] += 1
+	mdb.calls["Has"]++
 	return false
 }
 
 func (mdb *mockDB) Set([]byte, []byte) {
-	mdb.calls["Set"] += 1
+	mdb.calls["Set"]++
 }
 
 func (mdb *mockDB) SetSync([]byte, []byte) {
-	mdb.calls["SetSync"] += 1
+	mdb.calls["SetSync"]++
 }
 
 func (mdb *mockDB) SetNoLock([]byte, []byte) {
-	mdb.calls["SetNoLock"] += 1
+	mdb.calls["SetNoLock"]++
 }
 
 func (mdb *mockDB) SetNoLockSync([]byte, []byte) {
-	mdb.calls["SetNoLockSync"] += 1
+	mdb.calls["SetNoLockSync"]++
 }
 
 func (mdb *mockDB) Delete([]byte) {
-	mdb.calls["Delete"] += 1
+	mdb.calls["Delete"]++
 }
 
 func (mdb *mockDB) DeleteSync([]byte) {
-	mdb.calls["DeleteSync"] += 1
+	mdb.calls["DeleteSync"]++
 }
 
 func (mdb *mockDB) DeleteNoLock([]byte) {
-	mdb.calls["DeleteNoLock"] += 1
+	mdb.calls["DeleteNoLock"]++
 }
 
 func (mdb *mockDB) DeleteNoLockSync([]byte) {
-	mdb.calls["DeleteNoLockSync"] += 1
+	mdb.calls["DeleteNoLockSync"]++
 }
 
 func (mdb *mockDB) Iterator(start, end []byte) Iterator {
-	mdb.calls["Iterator"] += 1
+	mdb.calls["Iterator"]++
 	return &mockIterator{}
 }
 
 func (mdb *mockDB) ReverseIterator(start, end []byte) Iterator {
-	mdb.calls["ReverseIterator"] += 1
+	mdb.calls["ReverseIterator"]++
 	return &mockIterator{}
 }
 
 func (mdb *mockDB) Close() {
-	mdb.calls["Close"] += 1
+	mdb.calls["Close"]++
 }
 
 func (mdb *mockDB) NewBatch() Batch {
-	mdb.calls["NewBatch"] += 1
+	mdb.calls["NewBatch"]++
 	return &memBatch{db: mdb}
 }
 
 func (mdb *mockDB) Print() {
-	mdb.calls["Print"] += 1
+	mdb.calls["Print"]++
 	fmt.Printf("mockDB{%v}", mdb.Stats())
 }
 
 func (mdb *mockDB) Stats() map[string]string {
-	mdb.calls["Stats"] += 1
+	mdb.calls["Stats"]++
 
 	res := make(map[string]string)
 	for key, count := range mdb.calls {

@@ -21,7 +21,7 @@ func cpIncr(bz []byte) (ret []byte) {
 	ret = cp(bz)
 	for i := len(bz) - 1; i >= 0; i-- {
 		if ret[i] < byte(0xFF) {
-			ret[i] += 1
+			ret[i]++
 			return
 		} else {
 			ret[i] = byte(0x00)

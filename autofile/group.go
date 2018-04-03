@@ -267,7 +267,7 @@ func (g *Group) RotateFile() {
 		panic(err)
 	}
 
-	g.maxIndex += 1
+	g.maxIndex++
 }
 
 // NewReader returns a new group reader.
@@ -520,7 +520,7 @@ func (g *Group) readGroupInfo() GroupInfo {
 		minIndex, maxIndex = 0, 0
 	} else {
 		// Otherwise, the head file is 1 greater
-		maxIndex += 1
+		maxIndex++
 	}
 	return GroupInfo{minIndex, maxIndex, totalSize, headSize}
 }
