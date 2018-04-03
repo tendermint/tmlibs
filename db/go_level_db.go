@@ -46,9 +46,8 @@ func (db *GoLevelDB) Get(key []byte) []byte {
 	if err != nil {
 		if err == errors.ErrNotFound {
 			return nil
-		} else {
-			panic(err)
 		}
+		panic(err)
 	}
 	return res
 }

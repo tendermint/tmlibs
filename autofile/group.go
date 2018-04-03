@@ -277,9 +277,8 @@ func (g *Group) NewReader(index int) (*GroupReader, error) {
 	err := r.SetIndex(index)
 	if err != nil {
 		return nil, err
-	} else {
-		return r, nil
 	}
+	return r, nil
 }
 
 // Returns -1 if line comes after, 0 if found, 1 if line comes before.
@@ -311,9 +310,8 @@ func (g *Group) Search(prefix string, cmp SearchFunc) (*GroupReader, bool, error
 			if err != nil {
 				r.Close()
 				return nil, false, err
-			} else {
-				return r, match, err
 			}
+			return r, match, err
 		}
 
 		// Read starting roughly at the middle file,
@@ -349,9 +347,8 @@ func (g *Group) Search(prefix string, cmp SearchFunc) (*GroupReader, bool, error
 			if err != nil {
 				r.Close()
 				return nil, false, err
-			} else {
-				return r, true, err
 			}
+			return r, true, err
 		} else {
 			// We passed it
 			maxIndex = curIndex - 1
@@ -429,9 +426,8 @@ GROUP_LOOP:
 			if err == io.EOF {
 				if found {
 					return match, found, nil
-				} else {
-					continue GROUP_LOOP
 				}
+				continue GROUP_LOOP
 			} else if err != nil {
 				return "", false, err
 			}
@@ -442,9 +438,8 @@ GROUP_LOOP:
 			if r.CurIndex() > i {
 				if found {
 					return match, found, nil
-				} else {
-					continue GROUP_LOOP
 				}
+				continue GROUP_LOOP
 			}
 		}
 	}
@@ -528,9 +523,8 @@ func (g *Group) readGroupInfo() GroupInfo {
 func filePathForIndex(headPath string, index int, maxIndex int) string {
 	if index == maxIndex {
 		return headPath
-	} else {
-		return fmt.Sprintf("%v.%03d", headPath, index)
 	}
+	return fmt.Sprintf("%v.%03d", headPath, index)
 }
 
 //--------------------------------------------------------------------------------
@@ -567,9 +561,8 @@ func (gr *GroupReader) Close() error {
 		gr.curFile = nil
 		gr.curLine = nil
 		return err
-	} else {
-		return nil
 	}
+	return nil
 }
 
 // Read implements io.Reader, reading bytes from the current Reader
@@ -598,10 +591,10 @@ func (gr *GroupReader) Read(p []byte) (n int, err error) {
 		if err == io.EOF {
 			if n >= lenP {
 				return n, nil
-			} else { // Open the next file
-				if err1 := gr.openFile(gr.curIndex + 1); err1 != nil {
-					return n, err1
-				}
+			}
+			// Open the next file
+			if err1 := gr.openFile(gr.curIndex + 1); err1 != nil {
+				return n, err1
 			}
 		} else if err != nil {
 			return n, err
@@ -643,10 +636,9 @@ func (gr *GroupReader) ReadLine() (string, error) {
 			}
 			if len(bytesRead) > 0 && bytesRead[len(bytesRead)-1] == byte('\n') {
 				return linePrefix + string(bytesRead[:len(bytesRead)-1]), nil
-			} else {
-				linePrefix += string(bytesRead)
-				continue
 			}
+			linePrefix += string(bytesRead)
+			continue
 		} else if err != nil {
 			return "", err
 		}

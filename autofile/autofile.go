@@ -129,9 +129,8 @@ func (af *AutoFile) Size() (int64, error) {
 		if err != nil {
 			if err == os.ErrNotExist {
 				return 0, nil
-			} else {
-				return -1, err
 			}
+			return -1, err
 		}
 	}
 	stat, err := af.file.Stat()
