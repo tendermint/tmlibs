@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.8.0 (TBD)
+## 0.8.0 (April 3, 2018)
 
 BREAKING:
 
