@@ -139,15 +139,14 @@ func WriteFileAtomic(filename string, data []byte, perm os.FileMode) error {
 	if err != nil {
 		return err
 	}
-	// Clean up in any case. Defer stacking order is last-in-first-out.
-	defer os.Remove(f.Name())
-	defer f.Close()
 
 	if n, err := f.Write(data); err != nil {
 		return err
 	} else if n < len(data) {
 		return io.ErrShortWrite
 	}
+	f.Close()
+	defer os.Remove(f.Name())
 
 	return os.Rename(f.Name(), filename)
 }
