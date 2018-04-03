@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	. "github.com/tendermint/tmlibs/common"
+	cmn "github.com/tendermint/tmlibs/common"
 )
 
 /* AutoFile usage
@@ -44,7 +44,7 @@ type AutoFile struct {
 
 func OpenAutoFile(path string) (af *AutoFile, err error) {
 	af = &AutoFile{
-		ID:     RandStr(12) + ":" + path,
+		ID:     cmn.RandStr(12) + ":" + path,
 		Path:   path,
 		ticker: time.NewTicker(autoFileOpenDuration),
 	}
