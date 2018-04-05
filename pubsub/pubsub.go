@@ -38,18 +38,25 @@ var (
 	ErrAlreadySubscribed = errors.New("already subscribed")
 )
 
+type ITagSet interface {
+	Get(key string) (result interface{}, found bool)
+	Len() int
+}
+
+type TagSet map[string]interface{}
+
 type cmd struct {
 	op       operation
 	query    Query
 	ch       chan<- interface{}
 	clientID string
 	msg      interface{}
-	tags     map[string]interface{}
+	tags     ITagSet
 }
 
 // Query defines an interface for a query to be used for subscribing.
 type Query interface {
-	Matches(tags map[string]interface{}) bool
+	Matches(tags ITagSet) bool
 	String() string
 }
 
@@ -67,6 +74,22 @@ type Server struct {
 
 // Option sets a parameter for the server.
 type Option func(*Server)
+
+// NewTagSet constructs a new immutable tag set from a map.
+func NewTagSet(data map[string]interface{}) TagSet {
+	return data
+}
+
+// Get retreives the value associated with a tag, if any.
+func (ts TagSet) Get(key string) (result interface{}, found bool) {
+	result, found = ts[key]
+	return
+}
+
+// Len returns the number of tags in the set.
+func (ts TagSet) Len() int {
+	return len(ts)
+}
 
 // NewServer returns a new server. See the commentary on the Option functions
 // for a detailed description of how to configure buffering. If no options are
@@ -184,13 +207,13 @@ func (s *Server) UnsubscribeAll(ctx context.Context, clientID string) error {
 // Publish publishes the given message. An error will be returned to the caller
 // if the context is canceled.
 func (s *Server) Publish(ctx context.Context, msg interface{}) error {
-	return s.PublishWithTags(ctx, msg, make(map[string]interface{}))
+	return s.PublishWithTags(ctx, msg, NewTagSet(make(map[string]interface{})))
 }
 
 // PublishWithTags publishes the given message with the set of tags. The set is
 // matched with clients queries. If there is a match, the message is sent to
 // the client.
-func (s *Server) PublishWithTags(ctx context.Context, msg interface{}, tags map[string]interface{}) error {
+func (s *Server) PublishWithTags(ctx context.Context, msg interface{}, tags ITagSet) error {
 	select {
 	case s.cmds <- cmd{op: pub, msg: msg, tags: tags}:
 		return nil
@@ -302,7 +325,7 @@ func (state *state) removeAll(clientID string) {
 	delete(state.clients, clientID)
 }
 
-func (state *state) send(msg interface{}, tags map[string]interface{}) {
+func (state *state) send(msg interface{}, tags ITagSet) {
 	for q, clientToChannelMap := range state.queries {
 		if q.Matches(tags) {
 			for _, ch := range clientToChannelMap {
