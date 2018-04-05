@@ -38,12 +38,15 @@ var (
 	ErrAlreadySubscribed = errors.New("already subscribed")
 )
 
-type ITagSet interface {
-	Get(key string) (result interface{}, found bool)
+type TagMap interface {
+	// Get returns the value for a key, or nil if no value is present.
+	// The ok result indicates whether value was found in the tags.
+	Get(key string) (value interface{}, ok bool)
+	// Len returns the number of tags.
 	Len() int
 }
 
-type TagSet map[string]interface{}
+type tagMap map[string]interface{}
 
 type cmd struct {
 	op       operation
@@ -51,12 +54,12 @@ type cmd struct {
 	ch       chan<- interface{}
 	clientID string
 	msg      interface{}
-	tags     ITagSet
+	tags     TagMap
 }
 
 // Query defines an interface for a query to be used for subscribing.
 type Query interface {
-	Matches(tags ITagSet) bool
+	Matches(tags TagMap) bool
 	String() string
 }
 
@@ -75,19 +78,20 @@ type Server struct {
 // Option sets a parameter for the server.
 type Option func(*Server)
 
-// NewTagSet constructs a new immutable tag set from a map.
-func NewTagSet(data map[string]interface{}) TagSet {
-	return data
+// NewTagMap constructs a new immutable tag set from a map.
+func NewTagMap(data map[string]interface{}) TagMap {
+	return tagMap(data)
 }
 
-// Get retreives the value associated with a tag, if any.
-func (ts TagSet) Get(key string) (result interface{}, found bool) {
-	result, found = ts[key]
+// Get returns the value for a key, or nil if no value is present.
+// The ok result indicates whether value was found in the tags.
+func (ts tagMap) Get(key string) (value interface{}, ok bool) {
+	value, ok = ts[key]
 	return
 }
 
-// Len returns the number of tags in the set.
-func (ts TagSet) Len() int {
+// Len returns the number of tags.
+func (ts tagMap) Len() int {
 	return len(ts)
 }
 
@@ -207,13 +211,13 @@ func (s *Server) UnsubscribeAll(ctx context.Context, clientID string) error {
 // Publish publishes the given message. An error will be returned to the caller
 // if the context is canceled.
 func (s *Server) Publish(ctx context.Context, msg interface{}) error {
-	return s.PublishWithTags(ctx, msg, NewTagSet(make(map[string]interface{})))
+	return s.PublishWithTags(ctx, msg, NewTagMap(make(map[string]interface{})))
 }
 
 // PublishWithTags publishes the given message with the set of tags. The set is
 // matched with clients queries. If there is a match, the message is sent to
 // the client.
-func (s *Server) PublishWithTags(ctx context.Context, msg interface{}, tags ITagSet) error {
+func (s *Server) PublishWithTags(ctx context.Context, msg interface{}, tags TagMap) error {
 	select {
 	case s.cmds <- cmd{op: pub, msg: msg, tags: tags}:
 		return nil
@@ -325,7 +329,7 @@ func (state *state) removeAll(clientID string) {
 	delete(state.clients, clientID)
 }
 
-func (state *state) send(msg interface{}, tags ITagSet) {
+func (state *state) send(msg interface{}, tags TagMap) {
 	for q, clientToChannelMap := range state.queries {
 		if q.Matches(tags) {
 			for _, ch := range clientToChannelMap {

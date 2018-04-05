@@ -7,7 +7,7 @@ type Empty struct {
 }
 
 // Matches always returns true.
-func (Empty) Matches(tags pubsub.ITagSet) bool {
+func (Empty) Matches(tags pubsub.TagMap) bool {
 	return true
 }
 
