@@ -38,6 +38,8 @@ var (
 	ErrAlreadySubscribed = errors.New("already subscribed")
 )
 
+// TagMap is used to associate tags to a message.
+// They can be queried by subscribers to choose messages they will received.
 type TagMap interface {
 	// Get returns the value for a key, or nil if no value is present.
 	// The ok result indicates whether value was found in the tags.
