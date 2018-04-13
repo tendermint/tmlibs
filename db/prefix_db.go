@@ -24,7 +24,8 @@ func IteratePrefix(db DB, prefix []byte) Iterator {
 TODO: Make test, maybe rename.
 // Like IteratePrefix but the iterator strips the prefix from the keys.
 func IteratePrefixStripped(db DB, prefix []byte) Iterator {
-	return newUnprefixIterator(prefix, IteratePrefix(db, prefix))
+	start, end := ...
+	return newUnprefixIterator(prefix, start, end, IteratePrefix(db, prefix))
 }
 */
 
@@ -55,7 +56,10 @@ func (pdb *prefixDB) Get(key []byte) []byte {
 	pdb.mtx.Lock()
 	defer pdb.mtx.Unlock()
 
-	return pdb.db.Get(pdb.prefixed(key))
+	pkey := pdb.prefixed(key)
+	value := pdb.db.Get(pkey)
+	fmt.Printf("PREFIXDB GET %s = %X\n", pkey, value)
+	return value
 }
 
 // Implements DB.
@@ -71,7 +75,9 @@ func (pdb *prefixDB) Set(key []byte, value []byte) {
 	pdb.mtx.Lock()
 	defer pdb.mtx.Unlock()
 
-	pdb.db.Set(pdb.prefixed(key), value)
+	pkey := pdb.prefixed(key)
+	fmt.Printf("PREFIXDB SET %s = %X\n", pkey, value)
+	pdb.db.Set(pkey, value)
 }
 
 // Implements DB.
@@ -84,12 +90,12 @@ func (pdb *prefixDB) SetSync(key []byte, value []byte) {
 
 // Implements atomicSetDeleter.
 func (pdb *prefixDB) SetNoLock(key []byte, value []byte) {
-	pdb.db.Set(pdb.prefixed(key), value)
+	pdb.db.(atomicSetDeleter).SetNoLock(pdb.prefixed(key), value)
 }
 
 // Implements atomicSetDeleter.
 func (pdb *prefixDB) SetNoLockSync(key []byte, value []byte) {
-	pdb.db.SetSync(pdb.prefixed(key), value)
+	pdb.db.(atomicSetDeleter).SetNoLockSync(pdb.prefixed(key), value)
 }
 
 // Implements DB.
@@ -110,12 +116,12 @@ func (pdb *prefixDB) DeleteSync(key []byte) {
 
 // Implements atomicSetDeleter.
 func (pdb *prefixDB) DeleteNoLock(key []byte) {
-	pdb.db.Delete(pdb.prefixed(key))
+	pdb.db.(atomicSetDeleter).DeleteNoLock(pdb.prefixed(key))
 }
 
 // Implements atomicSetDeleter.
 func (pdb *prefixDB) DeleteNoLockSync(key []byte) {
-	pdb.db.DeleteSync(pdb.prefixed(key))
+	pdb.db.(atomicSetDeleter).DeleteNoLockSync(pdb.prefixed(key))
 }
 
 // Implements DB.
@@ -123,13 +129,17 @@ func (pdb *prefixDB) Iterator(start, end []byte) Iterator {
 	pdb.mtx.Lock()
 	defer pdb.mtx.Unlock()
 
-	pstart := append(pdb.prefix, start...)
+	pstart := append(cp(pdb.prefix), start...)
 	pend := []byte(nil)
-	if end != nil {
-		pend = append(pdb.prefix, end...)
+	if end == nil {
+		pend = cpIncr(pdb.prefix)
+	} else {
+		pend = append(cp(pdb.prefix), end...)
 	}
 	return newUnprefixIterator(
 		pdb.prefix,
+		start,
+		end,
 		pdb.db.Iterator(
 			pstart,
 			pend,
@@ -143,23 +153,37 @@ func (pdb *prefixDB) ReverseIterator(start, end []byte) Iterator {
 	defer pdb.mtx.Unlock()
 
 	pstart := []byte(nil)
-	if start != nil {
-		pstart = append(pdb.prefix, start...)
+	if start == nil {
+		// This will cause the underlying
+		// iterator to start with an item which
+		// doesn't start with prefix.  We will
+		// skip that item later in this
+		// function.
+		pstart = cpIncr(pdb.prefix)
+	} else {
+		pstart = append(cp(pdb.prefix), start...)
 	}
 	pend := []byte(nil)
-	if end != nil {
-		pend = append(pdb.prefix, end...)
+	if end == nil {
+		pend = pdb.prefix
+	} else {
+		pend = append(cp(pdb.prefix), end...)
+	}
+	ritr := pdb.db.ReverseIterator(pstart, pend)
+	if start == nil {
+		skipOne(ritr, cpIncr(pdb.prefix))
 	}
 	return newUnprefixIterator(
 		pdb.prefix,
-		pdb.db.ReverseIterator(
-			pstart,
-			pend,
-		),
+		start,
+		end,
+		ritr,
 	)
 }
 
 // Implements DB.
+// Panics if the underlying DB is not an
+// atomicSetDeleter.
 func (pdb *prefixDB) NewBatch() Batch {
 	pdb.mtx.Lock()
 	defer pdb.mtx.Unlock()
@@ -201,7 +225,7 @@ func (pdb *prefixDB) Stats() map[string]string {
 }
 
 func (pdb *prefixDB) prefixed(key []byte) []byte {
-	return append(pdb.prefix, key...)
+	return append(cp(pdb.prefix), key...)
 }
 
 //----------------------------------------
@@ -209,25 +233,22 @@ func (pdb *prefixDB) prefixed(key []byte) []byte {
 // Strips prefix while iterating from Iterator.
 type unprefixIterator struct {
 	prefix []byte
+	start  []byte
+	end    []byte
 	source Iterator
 }
 
-func newUnprefixIterator(prefix []byte, source Iterator) unprefixIterator {
+func newUnprefixIterator(prefix, start, end []byte, source Iterator) unprefixIterator {
 	return unprefixIterator{
 		prefix: prefix,
+		start:  start,
+		end:    end,
 		source: source,
 	}
 }
 
 func (itr unprefixIterator) Domain() (start []byte, end []byte) {
-	start, end = itr.source.Domain()
-	if len(start) > 0 {
-		start = stripPrefix(start, itr.prefix)
-	}
-	if len(end) > 0 {
-		end = stripPrefix(end, itr.prefix)
-	}
-	return
+	return itr.start, itr.end
 }
 
 func (itr unprefixIterator) Valid() bool {
@@ -260,4 +281,14 @@ func stripPrefix(key []byte, prefix []byte) (stripped []byte) {
 		panic("should not happne")
 	}
 	return key[len(prefix):]
+}
+
+// If the first iterator item is skipKey, then
+// skip it.
+func skipOne(itr Iterator, skipKey []byte) {
+	if itr.Valid() {
+		if bytes.Equal(itr.Key(), skipKey) {
+			itr.Next()
+		}
+	}
 }

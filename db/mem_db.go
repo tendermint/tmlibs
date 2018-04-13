@@ -37,7 +37,8 @@ func (db *MemDB) Get(key []byte) []byte {
 	defer db.mtx.Unlock()
 	key = nonNilBytes(key)
 
-	return db.db[string(key)]
+	value := db.db[string(key)]
+	return value
 }
 
 // Implements DB.
