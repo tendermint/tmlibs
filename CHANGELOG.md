@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.2 (April 12th, 2018)
+
+BUG FIXES:
+
+ - [db] PrefixDB Iterator/ReverseIterator fixes
+
 ## 0.8.1 (April 5th, 2018)
 
 FEATURES:
