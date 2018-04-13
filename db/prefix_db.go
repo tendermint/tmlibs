@@ -244,7 +244,7 @@ func newUnprefixIterator(prefix, start, end []byte, source Iterator) unprefixIte
 			prefix: prefix,
 			start:  start,
 			end:    end,
-			source: nil,
+			source: source,
 			valid:  false,
 		}
 	} else {
@@ -293,9 +293,7 @@ func (itr unprefixIterator) Value() (value []byte) {
 }
 
 func (itr unprefixIterator) Close() {
-	if itr.source != nil {
-		itr.source.Close()
-	}
+	itr.source.Close()
 }
 
 //----------------------------------------
