@@ -58,7 +58,6 @@ func (pdb *prefixDB) Get(key []byte) []byte {
 
 	pkey := pdb.prefixed(key)
 	value := pdb.db.Get(pkey)
-	fmt.Printf("PREFIXDB GET %s = %X\n", pkey, value)
 	return value
 }
 
@@ -76,7 +75,6 @@ func (pdb *prefixDB) Set(key []byte, value []byte) {
 	defer pdb.mtx.Unlock()
 
 	pkey := pdb.prefixed(key)
-	fmt.Printf("PREFIXDB SET %s = %X\n", pkey, value)
 	pdb.db.Set(pkey, value)
 }
 
@@ -129,8 +127,8 @@ func (pdb *prefixDB) Iterator(start, end []byte) Iterator {
 	pdb.mtx.Lock()
 	defer pdb.mtx.Unlock()
 
-	pstart := append(cp(pdb.prefix), start...)
-	pend := []byte(nil)
+	var pstart, pend []byte
+	pstart = append(cp(pdb.prefix), start...)
 	if end == nil {
 		pend = cpIncr(pdb.prefix)
 	} else {
@@ -152,20 +150,21 @@ func (pdb *prefixDB) ReverseIterator(start, end []byte) Iterator {
 	pdb.mtx.Lock()
 	defer pdb.mtx.Unlock()
 
-	pstart := []byte(nil)
+	var pstart, pend []byte
 	if start == nil {
-		// This will cause the underlying
-		// iterator to start with an item which
-		// doesn't start with prefix.  We will
-		// skip that item later in this
-		// function.
+		// This may cause the underlying iterator to start with
+		// an item which doesn't start with prefix.  We will skip
+		// that item later in this function. See 'skipOne'.
 		pstart = cpIncr(pdb.prefix)
 	} else {
 		pstart = append(cp(pdb.prefix), start...)
 	}
-	pend := []byte(nil)
 	if end == nil {
-		pend = pdb.prefix
+		// This may cause the underlying iterator to end with an
+		// item which doesn't start with prefix.  The
+		// unprefixIterator will terminate iteration
+		// automatically upon detecting this.
+		pend = cpDecr(pdb.prefix)
 	} else {
 		pend = append(cp(pdb.prefix), end...)
 	}
@@ -236,14 +235,26 @@ type unprefixIterator struct {
 	start  []byte
 	end    []byte
 	source Iterator
+	valid  bool
 }
 
 func newUnprefixIterator(prefix, start, end []byte, source Iterator) unprefixIterator {
-	return unprefixIterator{
-		prefix: prefix,
-		start:  start,
-		end:    end,
-		source: source,
+	if !source.Valid() || !bytes.HasPrefix(source.Key(), prefix) {
+		return unprefixIterator{
+			prefix: prefix,
+			start:  start,
+			end:    end,
+			source: nil,
+			valid:  false,
+		}
+	} else {
+		return unprefixIterator{
+			prefix: prefix,
+			start:  start,
+			end:    end,
+			source: source,
+			valid:  true,
+		}
 	}
 }
 
@@ -252,23 +263,39 @@ func (itr unprefixIterator) Domain() (start []byte, end []byte) {
 }
 
 func (itr unprefixIterator) Valid() bool {
-	return itr.source.Valid()
+	return itr.valid && itr.source.Valid()
 }
 
 func (itr unprefixIterator) Next() {
+	if !itr.valid {
+		panic("unprefixIterator invalid, cannot call Next()")
+	}
 	itr.source.Next()
+	if !itr.source.Valid() || !bytes.HasPrefix(itr.source.Key(), itr.prefix) {
+		itr.source.Close()
+		itr.valid = false
+		return
+	}
 }
 
 func (itr unprefixIterator) Key() (key []byte) {
+	if !itr.valid {
+		panic("unprefixIterator invalid, cannot call Key()")
+	}
 	return stripPrefix(itr.source.Key(), itr.prefix)
 }
 
 func (itr unprefixIterator) Value() (value []byte) {
+	if !itr.valid {
+		panic("unprefixIterator invalid, cannot call Value()")
+	}
 	return itr.source.Value()
 }
 
 func (itr unprefixIterator) Close() {
-	itr.source.Close()
+	if itr.source != nil {
+		itr.source.Close()
+	}
 }
 
 //----------------------------------------

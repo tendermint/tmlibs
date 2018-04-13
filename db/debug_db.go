@@ -2,7 +2,6 @@ package db
 
 import (
 	"fmt"
-	"reflect"
 	"sync"
 
 	cmn "github.com/tendermint/tmlibs/common"
