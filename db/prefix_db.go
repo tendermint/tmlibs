@@ -25,7 +25,7 @@ TODO: Make test, maybe rename.
 // Like IteratePrefix but the iterator strips the prefix from the keys.
 func IteratePrefixStripped(db DB, prefix []byte) Iterator {
 	start, end := ...
-	return newUnprefixIterator(prefix, start, end, IteratePrefix(db, prefix))
+	return newPrefixIterator(prefix, start, end, IteratePrefix(db, prefix))
 }
 */
 
@@ -86,16 +86,6 @@ func (pdb *prefixDB) SetSync(key []byte, value []byte) {
 	pdb.db.SetSync(pdb.prefixed(key), value)
 }
 
-// Implements atomicSetDeleter.
-func (pdb *prefixDB) SetNoLock(key []byte, value []byte) {
-	pdb.db.(atomicSetDeleter).SetNoLock(pdb.prefixed(key), value)
-}
-
-// Implements atomicSetDeleter.
-func (pdb *prefixDB) SetNoLockSync(key []byte, value []byte) {
-	pdb.db.(atomicSetDeleter).SetNoLockSync(pdb.prefixed(key), value)
-}
-
 // Implements DB.
 func (pdb *prefixDB) Delete(key []byte) {
 	pdb.mtx.Lock()
@@ -112,16 +102,6 @@ func (pdb *prefixDB) DeleteSync(key []byte) {
 	pdb.db.DeleteSync(pdb.prefixed(key))
 }
 
-// Implements atomicSetDeleter.
-func (pdb *prefixDB) DeleteNoLock(key []byte) {
-	pdb.db.(atomicSetDeleter).DeleteNoLock(pdb.prefixed(key))
-}
-
-// Implements atomicSetDeleter.
-func (pdb *prefixDB) DeleteNoLockSync(key []byte) {
-	pdb.db.(atomicSetDeleter).DeleteNoLockSync(pdb.prefixed(key))
-}
-
 // Implements DB.
 func (pdb *prefixDB) Iterator(start, end []byte) Iterator {
 	pdb.mtx.Lock()
@@ -134,7 +114,7 @@ func (pdb *prefixDB) Iterator(start, end []byte) Iterator {
 	} else {
 		pend = append(cp(pdb.prefix), end...)
 	}
-	return newUnprefixIterator(
+	return newPrefixIterator(
 		pdb.prefix,
 		start,
 		end,
@@ -162,7 +142,7 @@ func (pdb *prefixDB) ReverseIterator(start, end []byte) Iterator {
 	if end == nil {
 		// This may cause the underlying iterator to end with an
 		// item which doesn't start with prefix.  The
-		// unprefixIterator will terminate iteration
+		// prefixIterator will terminate iteration
 		// automatically upon detecting this.
 		pend = cpDecr(pdb.prefix)
 	} else {
@@ -172,7 +152,7 @@ func (pdb *prefixDB) ReverseIterator(start, end []byte) Iterator {
 	if start == nil {
 		skipOne(ritr, cpIncr(pdb.prefix))
 	}
-	return newUnprefixIterator(
+	return newPrefixIterator(
 		pdb.prefix,
 		start,
 		end,
@@ -187,8 +167,30 @@ func (pdb *prefixDB) NewBatch() Batch {
 	pdb.mtx.Lock()
 	defer pdb.mtx.Unlock()
 
-	return &memBatch{pdb, nil}
+	return newPrefixBatch(pdb.prefix, pdb.db.NewBatch())
 }
+
+/* NOTE: Uncomment to use memBatch instead of prefixBatch
+// Implements atomicSetDeleter.
+func (pdb *prefixDB) SetNoLock(key []byte, value []byte) {
+	pdb.db.(atomicSetDeleter).SetNoLock(pdb.prefixed(key), value)
+}
+
+// Implements atomicSetDeleter.
+func (pdb *prefixDB) SetNoLockSync(key []byte, value []byte) {
+	pdb.db.(atomicSetDeleter).SetNoLockSync(pdb.prefixed(key), value)
+}
+
+// Implements atomicSetDeleter.
+func (pdb *prefixDB) DeleteNoLock(key []byte) {
+	pdb.db.(atomicSetDeleter).DeleteNoLock(pdb.prefixed(key))
+}
+
+// Implements atomicSetDeleter.
+func (pdb *prefixDB) DeleteNoLockSync(key []byte) {
+	pdb.db.(atomicSetDeleter).DeleteNoLockSync(pdb.prefixed(key))
+}
+*/
 
 // Implements DB.
 func (pdb *prefixDB) Close() {
@@ -228,9 +230,43 @@ func (pdb *prefixDB) prefixed(key []byte) []byte {
 }
 
 //----------------------------------------
+// prefixBatch
+
+type prefixBatch struct {
+	prefix []byte
+	source Batch
+}
+
+func newPrefixBatch(prefix []byte, source Batch) prefixBatch {
+	return prefixBatch{
+		prefix: prefix,
+		source: source,
+	}
+}
+
+func (pb prefixBatch) Set(key, value []byte) {
+	pkey := append(cp(pb.prefix), key...)
+	pb.source.Set(pkey, value)
+}
+
+func (pb prefixBatch) Delete(key []byte) {
+	pkey := append(cp(pb.prefix), key...)
+	pb.source.Delete(pkey)
+}
+
+func (pb prefixBatch) Write() {
+	pb.source.Write()
+}
+
+func (pb prefixBatch) WriteSync() {
+	pb.source.WriteSync()
+}
+
+//----------------------------------------
+// prefixIterator
 
 // Strips prefix while iterating from Iterator.
-type unprefixIterator struct {
+type prefixIterator struct {
 	prefix []byte
 	start  []byte
 	end    []byte
@@ -238,9 +274,9 @@ type unprefixIterator struct {
 	valid  bool
 }
 
-func newUnprefixIterator(prefix, start, end []byte, source Iterator) unprefixIterator {
+func newPrefixIterator(prefix, start, end []byte, source Iterator) prefixIterator {
 	if !source.Valid() || !bytes.HasPrefix(source.Key(), prefix) {
-		return unprefixIterator{
+		return prefixIterator{
 			prefix: prefix,
 			start:  start,
 			end:    end,
@@ -248,7 +284,7 @@ func newUnprefixIterator(prefix, start, end []byte, source Iterator) unprefixIte
 			valid:  false,
 		}
 	} else {
-		return unprefixIterator{
+		return prefixIterator{
 			prefix: prefix,
 			start:  start,
 			end:    end,
@@ -258,17 +294,17 @@ func newUnprefixIterator(prefix, start, end []byte, source Iterator) unprefixIte
 	}
 }
 
-func (itr unprefixIterator) Domain() (start []byte, end []byte) {
+func (itr prefixIterator) Domain() (start []byte, end []byte) {
 	return itr.start, itr.end
 }
 
-func (itr unprefixIterator) Valid() bool {
+func (itr prefixIterator) Valid() bool {
 	return itr.valid && itr.source.Valid()
 }
 
-func (itr unprefixIterator) Next() {
+func (itr prefixIterator) Next() {
 	if !itr.valid {
-		panic("unprefixIterator invalid, cannot call Next()")
+		panic("prefixIterator invalid, cannot call Next()")
 	}
 	itr.source.Next()
 	if !itr.source.Valid() || !bytes.HasPrefix(itr.source.Key(), itr.prefix) {
@@ -278,21 +314,21 @@ func (itr unprefixIterator) Next() {
 	}
 }
 
-func (itr unprefixIterator) Key() (key []byte) {
+func (itr prefixIterator) Key() (key []byte) {
 	if !itr.valid {
-		panic("unprefixIterator invalid, cannot call Key()")
+		panic("prefixIterator invalid, cannot call Key()")
 	}
 	return stripPrefix(itr.source.Key(), itr.prefix)
 }
 
-func (itr unprefixIterator) Value() (value []byte) {
+func (itr prefixIterator) Value() (value []byte) {
 	if !itr.valid {
-		panic("unprefixIterator invalid, cannot call Value()")
+		panic("prefixIterator invalid, cannot call Value()")
 	}
 	return itr.source.Value()
 }
 
-func (itr unprefixIterator) Close() {
+func (itr prefixIterator) Close() {
 	itr.source.Close()
 }
 
