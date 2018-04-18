@@ -3,6 +3,8 @@ package common
 import (
 	"encoding/binary"
 	"fmt"
+	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -282,10 +284,10 @@ func (bA *BitArray) stringIndented(indent string) string {
 			bits = ""
 		}
 		if i%10 == 9 {
-			bits += " "
+			bits += indent
 		}
 		if i%50 == 49 {
-			bits += " "
+			bits += indent
 		}
 	}
 	if len(bits) > 0 {
@@ -319,4 +321,59 @@ func (bA *BitArray) Update(o *BitArray) {
 	defer bA.mtx.Unlock()
 
 	copy(bA.Elems, o.Elems)
+}
+
+// MarshalJSON implements json.Marshaler interface by marshaling bit array
+// using a custom format:
+//
+//		BA{Bits:Elems}
+//
+// See StringIndented function.
+func (bA *BitArray) MarshalJSON() ([]byte, error) {
+	if bA == nil {
+		return nil, nil
+	}
+
+	bA.mtx.Lock()
+	defer bA.mtx.Unlock()
+	return []byte("\"" + bA.stringIndented("") + "\""), nil
+}
+
+var bitArrayJSONRegexp = regexp.MustCompile(`\A"BA{(\d+):([_X\s]+)}"\z`)
+
+// UnmarshalJSON implements json.Unmarshaler interface by unmarshaling a custom
+// JSON description.
+func (bA *BitArray) UnmarshalJSON(b []byte) error {
+	if string(b) == "null" {
+		bA = nil
+		return nil
+	}
+
+	bAStr := string(b)
+
+	matches := bitArrayJSONRegexp.FindAllStringSubmatch(bAStr, 2)
+	if len(matches) != 1 {
+		return fmt.Errorf("BitArray should be a string of format %q: %v", bitArrayJSONRegexp.String(), matches)
+	}
+	match := matches[0]
+
+	bits, err := strconv.Atoi(match[1])
+	if err != nil {
+		return ErrorWrap(err, "failed to parse number of bits")
+	}
+
+	bA2 := NewBitArray(bits)
+	if bA2 == nil {
+		return nil
+	}
+
+	for i := 0; i < bA2.Bits; i++ {
+		if match[2][i] == 0x58 { // "X"
+			bA2.SetIndex(i, true)
+		}
+	}
+
+	*bA = *bA2
+
+	return nil
 }
