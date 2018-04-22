@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"regexp"
-	"strconv"
 	"strings"
 	"sync"
 )
@@ -275,7 +274,7 @@ func (bA *BitArray) stringIndented(indent string) string {
 	bits := ""
 	for i := 0; i < bA.Bits; i++ {
 		if bA.getIndex(i) {
-			bits += "X"
+			bits += "x"
 		} else {
 			bits += "_"
 		}
@@ -324,56 +323,56 @@ func (bA *BitArray) Update(o *BitArray) {
 }
 
 // MarshalJSON implements json.Marshaler interface by marshaling bit array
-// using a custom format:
-//
-//		BA{Bits:Elems}
-//
-// See StringIndented function.
+// using a custom format: a string of '-' or 'x' where 'x' denotes the 1 bit.
 func (bA *BitArray) MarshalJSON() ([]byte, error) {
 	if bA == nil {
-		return nil, nil
+		return []byte("null"), nil
 	}
 
 	bA.mtx.Lock()
 	defer bA.mtx.Unlock()
-	return []byte("\"" + bA.stringIndented("") + "\""), nil
+
+	bits := `"`
+	for i := 0; i < bA.Bits; i++ {
+		if bA.getIndex(i) {
+			bits += `x`
+		} else {
+			bits += `_`
+		}
+	}
+	bits += `"`
+	return []byte(bits), nil
 }
 
-var bitArrayJSONRegexp = regexp.MustCompile(`\A"BA{(\d+):([_X\s]+)}"\z`)
+var bitArrayJSONRegexp = regexp.MustCompile(`\A"([_x]*)"\z`)
 
 // UnmarshalJSON implements json.Unmarshaler interface by unmarshaling a custom
 // JSON description.
-func (bA *BitArray) UnmarshalJSON(b []byte) error {
-	if string(b) == "null" {
-		bA = nil
+func (bA *BitArray) UnmarshalJSON(bz []byte) error {
+	b := string(bz)
+	if b == "null" {
+		// This is required e.g. for encoding/json when decoding
+		// into a pointer with pre-allocated BitArray.
+		bA.Bits = 0
+		bA.Elems = nil
 		return nil
 	}
 
-	bAStr := string(b)
-
-	matches := bitArrayJSONRegexp.FindAllStringSubmatch(bAStr, 2)
-	if len(matches) != 1 {
-		return fmt.Errorf("BitArray should be a string of format %q: %v", bitArrayJSONRegexp.String(), matches)
+	// Validate 'b'.
+	match := bitArrayJSONRegexp.FindStringSubmatch(b)
+	if match == nil {
+		return fmt.Errorf("BitArray in JSON should be a string of format %q but got %s", bitArrayJSONRegexp.String(), b)
 	}
-	match := matches[0]
+	bits := match[1]
 
-	bits, err := strconv.Atoi(match[1])
-	if err != nil {
-		return ErrorWrap(err, "failed to parse number of bits")
-	}
-
-	bA2 := NewBitArray(bits)
-	if bA2 == nil {
-		return nil
-	}
-
-	for i := 0; i < bA2.Bits; i++ {
-		if match[2][i] == 0x58 { // "X"
+	// Construct new BitArray and copy over.
+	numBits := len(bits)
+	bA2 := NewBitArray(numBits)
+	for i := 0; i < numBits; i++ {
+		if bits[i] == 'x' {
 			bA2.SetIndex(i, true)
 		}
 	}
-
 	*bA = *bA2
-
 	return nil
 }

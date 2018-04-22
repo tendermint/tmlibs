@@ -219,19 +219,27 @@ func TestNewBitArrayNeverCrashesOnNegatives(t *testing.T) {
 }
 
 func TestJSONMarshalUnmarshal(t *testing.T) {
-	bA1 := NewBitArray(5)
-	bA1.SetIndex(0, true)
-	bA1.SetIndex(1, true)
 
-	bA2, _ := randBitArray(100)
+	bA1 := NewBitArray(0)
+
+	bA2 := NewBitArray(1)
+
+	bA3 := NewBitArray(1)
+	bA3.SetIndex(0, true)
+
+	bA4 := NewBitArray(5)
+	bA4.SetIndex(0, true)
+	bA4.SetIndex(1, true)
 
 	testCases := []struct {
 		bA           *BitArray
 		marshalledBA string
 	}{
-		{nil, "null"},
-		{bA1, "\"BA{5:XX___}\""},
-		{bA2, "\"" + bA2.StringIndented("") + "\""},
+		{nil, `null`},
+		{bA1, `null`},
+		{bA2, `"_"`},
+		{bA3, `"x"`},
+		{bA4, `"xx___"`},
 	}
 
 	for _, tc := range testCases {
