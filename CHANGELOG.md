@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.8.2 (April 23rd, 2018)
+
+FEATURES:
+
+ - [pubsub] TagMap, NewTagMap
+ - [merkle] SimpleProofsFromMap()
+ - [common] IsASCIIText()
+ - [common] PrefixEndBytes // e.g. increment or nil
+ - [common] BitArray.MarshalJSON/.UnmarshalJSON
+ - [common] BitArray uses 'x' not 'X' for String() and above.
+
+BUG FIXES:
+
+ - [common] Fix TestParallelAbort nondeterministic failure #201/#202
+
 ## 0.8.1 (April 5th, 2018)
 
 FEATURES:
