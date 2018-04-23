@@ -250,13 +250,14 @@ func (bA *BitArray) PickRandom() (int, bool) {
 	return 0, false
 }
 
+// String returns a string representation of BitArray: BA{<bit-string>},
+// where <bit-string> is a sequence of 'x' (1) and '_' (0).
+// The <bit-string> includes spaces and newlines to help people.
+// For a simple sequence of 'x' and '_' characters with no spaces or newlines,
+// see the MarshalJSON() method.
+// Example: "BA{_x_}" or "nil-BitArray" for nil.
 func (bA *BitArray) String() string {
-	if bA == nil {
-		return "nil-BitArray"
-	}
-	bA.mtx.Lock()
-	defer bA.mtx.Unlock()
-	return bA.stringIndented("")
+	return bA.StringIndented("")
 }
 
 func (bA *BitArray) StringIndented(indent string) string {
@@ -269,7 +270,6 @@ func (bA *BitArray) StringIndented(indent string) string {
 }
 
 func (bA *BitArray) stringIndented(indent string) string {
-
 	lines := []string{}
 	bits := ""
 	for i := 0; i < bA.Bits; i++ {
