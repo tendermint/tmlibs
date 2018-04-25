@@ -5,6 +5,8 @@
 FEATURES:
 
  - [common] ASCIITrim()
+ - [pubsub] TagMap#Get returns a string value
+ - [pubsub] NewTagMap accepts a map of strings
 
 ## 0.8.2 (April 23rd, 2018)
 
