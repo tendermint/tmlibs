@@ -26,8 +26,8 @@
     "log/level",
     "log/term"
   ]
-  revision = "4dc7be5d2d12881735283bcab7352178e190fc71"
-  version = "v0.6.0"
+  revision = "ca4112baa34cb55091301bdc13b1420a122b1b9e"
+  version = "v0.7.0"
 
 [[projects]]
   name = "github.com/go-logfmt/logfmt"
@@ -185,6 +185,19 @@
   revision = "b89cc31ef7977104127d34c1bd31ebd1a9db2199"
 
 [[projects]]
+  name = "github.com/tendermint/tmlibs"
+  packages = [
+    "cli/flags",
+    "common",
+    "log",
+    "pubsub",
+    "pubsub/query",
+    "test"
+  ]
+  revision = "1b9b5652a199ab0be2e781393fb275b66377309d"
+  version = "v0.7.0"
+
+[[projects]]
   name = "golang.org/x/crypto"
   packages = ["ripemd160"]
   revision = "edd5e9b0879d13ee6970a50153d85b8fec9f7686"
@@ -215,6 +228,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "c33ff784e40965e1cd0ec6232b43e379c6608cb41a9c5c707247742b68c906fb"
+  inputs-digest = "cb91afc49715fffbcf1ede5ccd7413e3ead90e2ddfd3f552d9097df6ccfcbaac"
   solver-name = "gps-cdcl"
   solver-version = 1
