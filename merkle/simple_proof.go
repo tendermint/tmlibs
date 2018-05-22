@@ -23,7 +23,7 @@ func SimpleProofsFromHashers(items []Hasher) (rootHash []byte, proofs []*SimpleP
 }
 
 func SimpleProofsFromMap(m map[string]Hasher) (rootHash []byte, proofs []*SimpleProof) {
-	sm := NewSimpleMap()
+	sm := newSimpleMap()
 	for k, v := range m {
 		sm.Set(k, v)
 	}
@@ -31,7 +31,7 @@ func SimpleProofsFromMap(m map[string]Hasher) (rootHash []byte, proofs []*Simple
 	kvs := sm.kvs
 	kvsH := make([]Hasher, 0, len(kvs))
 	for _, kvp := range kvs {
-		kvsH = append(kvsH, KVPair(kvp))
+		kvsH = append(kvsH, kvPair(kvp))
 	}
 	return SimpleProofsFromHashers(kvsH)
 }
