@@ -28,19 +28,15 @@ import (
 	"github.com/tendermint/tmlibs/merkle/tmhash"
 )
 
+// Append the two hashes and hash them
 func SimpleHashFromTwoHashes(left []byte, right []byte) []byte {
 	var hasher = tmhash.New()
-	err := encodeByteSlice(hasher, left)
-	if err != nil {
-		panic(err)
-	}
-	err = encodeByteSlice(hasher, right)
-	if err != nil {
-		panic(err)
-	}
+	hasher.Write(left)
+	hasher.Write(right)
 	return hasher.Sum(nil)
 }
 
+// Expects hashes!
 func SimpleHashFromHashes(hashes [][]byte) []byte {
 	// Recursive impl.
 	switch len(hashes) {
