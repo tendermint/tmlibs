@@ -149,3 +149,38 @@ func TestGoLevelDBBackend(t *testing.T) {
 	_, ok := db.(*GoLevelDB)
 	assert.True(t, ok)
 }
+
+func TestDBIterator(t *testing.T) {
+	for dbType := range backends {
+		testDBIterator(t, dbType)
+	}
+}
+
+func testDBIterator(t *testing.T, backend DBBackendType) {
+	name := cmn.Fmt("test_%x", cmn.RandStr(12))
+	db := NewDB(name, backend, "")
+	defer cleanupDBDir("", name)
+
+	for i := 0; i < 10; i++ {
+		db.Set(int642Bytes(int64(i)), nil)
+	}
+	it := db.Iterator(nil, nil)
+	rit := db.ReverseIterator(nil, nil)
+	var forw []int64
+	forb := []int64{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
+	var back []int64
+	backb := []int64{9, 8, 7, 6, 5, 4, 3, 2, 1, 0}
+	for it.Valid() {
+		forw = append(forw, bytes2Int64(it.Key()))
+		//fmt.Printf("%s forward %d\n", backend, bytes2Int64(it.Key()))
+		it.Next()
+	}
+	for rit.Valid() {
+		back = append(back, bytes2Int64(rit.Key()))
+		//fmt.Printf("%s backward %d\n", backend, bytes2Int64(rit.Key()))
+		rit.Next()
+	}
+	assert.Equal(t, forw, forb, "forward iterator returned incorrect results")
+	assert.Equal(t, back, backb, "reverse iterator returned incorrect results")
+
+}

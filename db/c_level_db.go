@@ -190,7 +190,8 @@ func (db *CLevelDB) Iterator(start, end []byte) Iterator {
 }
 
 func (db *CLevelDB) ReverseIterator(start, end []byte) Iterator {
-	panic("not implemented yet") // XXX
+	itr := db.db.NewIterator(db.ro)
+	return newCLevelDBIterator(itr, start, end, true)
 }
 
 var _ Iterator = (*cLevelDBIterator)(nil)
@@ -204,7 +205,11 @@ type cLevelDBIterator struct {
 
 func newCLevelDBIterator(source *levigo.Iterator, start, end []byte, isReverse bool) *cLevelDBIterator {
 	if isReverse {
-		panic("not implemented yet") // XXX
+		if end != nil {
+			source.Seek(end)
+		} else {
+			source.SeekToLast()
+		}
 	}
 	if start != nil {
 		source.Seek(start)
@@ -243,7 +248,12 @@ func (itr cLevelDBIterator) Valid() bool {
 	// If key is end or past it, invalid.
 	var end = itr.end
 	var key = itr.source.Key()
-	if end != nil && bytes.Compare(end, key) <= 0 {
+	if !itr.isReverse && end != nil && bytes.Compare(end, key) <= 0 {
+		itr.isInvalid = true
+		return false
+	}
+
+	if itr.isReverse && start != nil && bytes.Compare(start, key) > 0 {
 		itr.isInvalid = true
 		return false
 	}

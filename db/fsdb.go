@@ -151,6 +151,10 @@ func (db *FSDB) Mutex() *sync.Mutex {
 }
 
 func (db *FSDB) Iterator(start, end []byte) Iterator {
+	return db.makeIterator(start, end, false)
+}
+
+func (db *FSDB) makeIterator(start, end []byte, isReversed bool) Iterator {
 	db.mtx.Lock()
 	defer db.mtx.Unlock()
 
@@ -160,12 +164,16 @@ func (db *FSDB) Iterator(start, end []byte) Iterator {
 	if err != nil {
 		panic(errors.Wrapf(err, "Listing keys in %s", db.dir))
 	}
-	sort.Strings(keys)
+	if isReversed {
+		sort.Sort(sort.Reverse(sort.StringSlice(keys)))
+	} else {
+		sort.Strings(keys)
+	}
 	return newMemDBIterator(db, keys, start, end)
 }
 
 func (db *FSDB) ReverseIterator(start, end []byte) Iterator {
-	panic("not implemented yet") // XXX
+	return db.makeIterator(start, end, true)
 }
 
 func (db *FSDB) nameToPath(name []byte) string {
