@@ -151,16 +151,22 @@ func (db *FSDB) Mutex() *sync.Mutex {
 }
 
 func (db *FSDB) Iterator(start, end []byte) Iterator {
-	return db.makeIterator(start, end, false)
+	return db.MakeIterator(start, end, false)
 }
 
-func (db *FSDB) makeIterator(start, end []byte, isReversed bool) Iterator {
+func (db *FSDB) MakeIterator(start, end []byte, isReversed bool) Iterator {
 	db.mtx.Lock()
 	defer db.mtx.Unlock()
 
 	// We need a copy of all of the keys.
 	// Not the best, but probably not a bottleneck depending.
-	keys, err := list(db.dir, start, end)
+	var keys []string
+	var err error
+	if isReversed {
+		keys, err = list(db.dir, end, start)
+	} else {
+		keys, err = list(db.dir, start, end)
+	}
 	if err != nil {
 		panic(errors.Wrapf(err, "Listing keys in %s", db.dir))
 	}
@@ -173,7 +179,7 @@ func (db *FSDB) makeIterator(start, end []byte, isReversed bool) Iterator {
 }
 
 func (db *FSDB) ReverseIterator(start, end []byte) Iterator {
-	return db.makeIterator(start, end, true)
+	return db.MakeIterator(start, end, true)
 }
 
 func (db *FSDB) nameToPath(name []byte) string {

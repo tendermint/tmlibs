@@ -172,12 +172,10 @@ func testDBIterator(t *testing.T, backend DBBackendType) {
 	backb := []int64{9, 8, 7, 6, 5, 4, 3, 2, 1, 0}
 	for it.Valid() {
 		forw = append(forw, bytes2Int64(it.Key()))
-		//fmt.Printf("%s forward %d\n", backend, bytes2Int64(it.Key()))
 		it.Next()
 	}
 	for rit.Valid() {
 		back = append(back, bytes2Int64(rit.Key()))
-		//fmt.Printf("%s backward %d\n", backend, bytes2Int64(rit.Key()))
 		rit.Next()
 	}
 	assert.Equal(t, forw, forb, "forward iterator returned incorrect results")
