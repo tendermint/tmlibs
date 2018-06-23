@@ -209,9 +209,7 @@ var _ Iterator = (*goLevelDBIterator)(nil)
 
 func newGoLevelDBIterator(source iterator.Iterator, start, end []byte, isReverse bool) *goLevelDBIterator {
 	if isReverse && start == nil {
-		for !source.Last() {
-			source.Next()
-		}
+		source.Last()
 	} else {
 		source.Seek(start)
 	}

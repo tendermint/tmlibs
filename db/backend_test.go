@@ -152,7 +152,9 @@ func TestGoLevelDBBackend(t *testing.T) {
 
 func TestDBIterator(t *testing.T) {
 	for dbType := range backends {
-		testDBIterator(t, dbType)
+		t.Run(fmt.Sprintf("%v", dbType), func(t *testing.T) {
+			testDBIterator(t, dbType)
+		})
 	}
 }
 
@@ -164,21 +166,34 @@ func testDBIterator(t *testing.T, backend DBBackendType) {
 	for i := 0; i < 10; i++ {
 		db.Set(int642Bytes(int64(i)), nil)
 	}
-	it := db.Iterator(nil, nil)
-	rit := db.ReverseIterator(nil, nil)
-	var forw []int64
-	forb := []int64{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
-	var back []int64
-	backb := []int64{9, 8, 7, 6, 5, 4, 3, 2, 1, 0}
-	for it.Valid() {
-		forw = append(forw, bytes2Int64(it.Key()))
-		it.Next()
-	}
-	for rit.Valid() {
-		back = append(back, bytes2Int64(rit.Key()))
-		rit.Next()
-	}
-	assert.Equal(t, forw, forb, "forward iterator returned incorrect results")
-	assert.Equal(t, back, backb, "reverse iterator returned incorrect results")
 
+	verifyIterator(t, db.Iterator(nil, nil), []int64{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}, "forward iterator")
+	verifyIterator(t, db.ReverseIterator(nil, nil), []int64{9, 8, 7, 6, 5, 4, 3, 2, 1, 0}, "reverse iterator")
+
+	verifyIterator(t, db.Iterator(nil, int642Bytes(0)), []int64(nil), "forward iterator to 0")
+	verifyIterator(t, db.ReverseIterator(nil, int642Bytes(10)), []int64(nil), "reverse iterator to 10")
+
+	verifyIterator(t, db.Iterator(int642Bytes(0), nil), []int64{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}, "forward iterator from 0")
+	verifyIterator(t, db.Iterator(int642Bytes(1), nil), []int64{1, 2, 3, 4, 5, 6, 7, 8, 9}, "forward iterator from 1")
+	verifyIterator(t, db.ReverseIterator(int642Bytes(10), nil), []int64{9, 8, 7, 6, 5, 4, 3, 2, 1, 0}, "reverse iterator from 10")
+	verifyIterator(t, db.ReverseIterator(int642Bytes(9), nil), []int64{9, 8, 7, 6, 5, 4, 3, 2, 1, 0}, "reverse iterator from 9")
+	verifyIterator(t, db.ReverseIterator(int642Bytes(8), nil), []int64{8, 7, 6, 5, 4, 3, 2, 1, 0}, "reverse iterator from 8")
+
+	verifyIterator(t, db.Iterator(int642Bytes(0), int642Bytes(1)), []int64{0}, "forward iterator from 0 to 1")
+	verifyIterator(t, db.ReverseIterator(int642Bytes(9), int642Bytes(8)), []int64{9}, "reverse iterator from 9 to 8")
+
+	verifyIterator(t, db.Iterator(int642Bytes(2), int642Bytes(4)), []int64{2, 3}, "forward iterator from 2 to 4")
+	verifyIterator(t, db.Iterator(int642Bytes(4), int642Bytes(2)), []int64(nil), "forward iterator from 4 to 2")
+	verifyIterator(t, db.ReverseIterator(int642Bytes(4), int642Bytes(2)), []int64{4, 3}, "reverse iterator from 4 to 2")
+	verifyIterator(t, db.ReverseIterator(int642Bytes(2), int642Bytes(4)), []int64(nil), "reverse iterator from 2 to 4")
+
+}
+
+func verifyIterator(t *testing.T, itr Iterator, expected []int64, msg string) {
+	var list []int64
+	for itr.Valid() {
+		list = append(list, bytes2Int64(itr.Key()))
+		itr.Next()
+	}
+	assert.Equal(t, expected, list, msg)
 }
