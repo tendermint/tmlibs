@@ -160,13 +160,7 @@ func (db *FSDB) MakeIterator(start, end []byte, isReversed bool) Iterator {
 
 	// We need a copy of all of the keys.
 	// Not the best, but probably not a bottleneck depending.
-	var keys []string
-	var err error
-	if isReversed {
-		keys, err = list(db.dir, end, start)
-	} else {
-		keys, err = list(db.dir, start, end)
-	}
+	keys, err := list(db.dir, start, end, isReversed)
 	if err != nil {
 		panic(errors.Wrapf(err, "Listing keys in %s", db.dir))
 	}
@@ -227,7 +221,7 @@ func remove(path string) error {
 
 // List keys in a directory, stripping of escape sequences and dir portions.
 // CONTRACT: returns os errors directly without wrapping.
-func list(dirPath string, start, end []byte) ([]string, error) {
+func list(dirPath string, start, end []byte, isReversed bool) ([]string, error) {
 	dir, err := os.Open(dirPath)
 	if err != nil {
 		return nil, err
@@ -245,7 +239,7 @@ func list(dirPath string, start, end []byte) ([]string, error) {
 			return nil, fmt.Errorf("Failed to unescape %s while listing", name)
 		}
 		key := unescapeKey([]byte(n))
-		if IsKeyInDomain(key, start, end, false) {
+		if IsKeyInDomain(key, start, end, isReversed) {
 			keys = append(keys, string(key))
 		}
 	}

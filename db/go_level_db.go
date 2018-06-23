@@ -208,8 +208,15 @@ type goLevelDBIterator struct {
 var _ Iterator = (*goLevelDBIterator)(nil)
 
 func newGoLevelDBIterator(source iterator.Iterator, start, end []byte, isReverse bool) *goLevelDBIterator {
-	if isReverse && start == nil {
-		source.Last()
+	if isReverse {
+		if start == nil {
+			source.Last()
+		} else {
+			source.Seek(start)
+			if !source.Valid() {
+				source.Last()
+			}
+		}
 	} else {
 		source.Seek(start)
 	}
