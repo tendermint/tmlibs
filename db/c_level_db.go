@@ -204,14 +204,26 @@ type cLevelDBIterator struct {
 }
 
 func newCLevelDBIterator(source *levigo.Iterator, start, end []byte, isReverse bool) *cLevelDBIterator {
-	if start == nil {
-		if isReverse {
+	if isReverse {
+		if start == nil {
 			source.SeekToLast()
 		} else {
-			source.SeekToFirst()
+			source.Seek(start)
+			if source.Valid() {
+				soakey := source.Key() // start or after key
+				if bytes.Compare(start, soakey) < 0 {
+					source.Prev()
+				}
+			} else {
+				source.SeekToLast()
+			}
 		}
 	} else {
-		source.Seek(start)
+		if start == nil {
+			source.SeekToFirst()
+		} else {
+			source.Seek(start)
+		}
 	}
 	return &cLevelDBIterator{
 		source:    source,

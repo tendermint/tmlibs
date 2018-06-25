@@ -212,13 +212,22 @@ func newGoLevelDBIterator(source iterator.Iterator, start, end []byte, isReverse
 		if start == nil {
 			source.Last()
 		} else {
-			source.Seek(start)
-			if !source.Valid() {
+			valid := source.Seek(start)
+			if valid {
+				soakey := source.Key() // start or after key
+				if bytes.Compare(start, soakey) < 0 {
+					source.Prev()
+				}
+			} else {
 				source.Last()
 			}
 		}
 	} else {
-		source.Seek(start)
+		if start == nil {
+			source.First()
+		} else {
+			source.Seek(start)
+		}
 	}
 	return &goLevelDBIterator{
 		source:    source,

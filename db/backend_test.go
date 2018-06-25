@@ -164,20 +164,36 @@ func testDBIterator(t *testing.T, backend DBBackendType) {
 	defer cleanupDBDir("", name)
 
 	for i := 0; i < 10; i++ {
-		db.Set(int642Bytes(int64(i)), nil)
+		if i != 6 { // but skip 6.
+			db.Set(int642Bytes(int64(i)), nil)
+		}
 	}
 
-	verifyIterator(t, db.Iterator(nil, nil), []int64{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}, "forward iterator")
-	verifyIterator(t, db.ReverseIterator(nil, nil), []int64{9, 8, 7, 6, 5, 4, 3, 2, 1, 0}, "reverse iterator")
+	verifyIterator(t, db.Iterator(nil, nil), []int64{0, 1, 2, 3, 4, 5, 7, 8, 9}, "forward iterator")
+	verifyIterator(t, db.ReverseIterator(nil, nil), []int64{9, 8, 7, 5, 4, 3, 2, 1, 0}, "reverse iterator")
 
 	verifyIterator(t, db.Iterator(nil, int642Bytes(0)), []int64(nil), "forward iterator to 0")
-	verifyIterator(t, db.ReverseIterator(nil, int642Bytes(10)), []int64(nil), "reverse iterator to 10")
+	verifyIterator(t, db.ReverseIterator(nil, int642Bytes(10)), []int64(nil), "reverse iterator 10")
 
-	verifyIterator(t, db.Iterator(int642Bytes(0), nil), []int64{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}, "forward iterator from 0")
-	verifyIterator(t, db.Iterator(int642Bytes(1), nil), []int64{1, 2, 3, 4, 5, 6, 7, 8, 9}, "forward iterator from 1")
-	verifyIterator(t, db.ReverseIterator(int642Bytes(10), nil), []int64{9, 8, 7, 6, 5, 4, 3, 2, 1, 0}, "reverse iterator from 10")
-	verifyIterator(t, db.ReverseIterator(int642Bytes(9), nil), []int64{9, 8, 7, 6, 5, 4, 3, 2, 1, 0}, "reverse iterator from 9")
-	verifyIterator(t, db.ReverseIterator(int642Bytes(8), nil), []int64{8, 7, 6, 5, 4, 3, 2, 1, 0}, "reverse iterator from 8")
+	verifyIterator(t, db.Iterator(int642Bytes(0), nil), []int64{0, 1, 2, 3, 4, 5, 7, 8, 9}, "forward iterator from 0")
+	verifyIterator(t, db.Iterator(int642Bytes(1), nil), []int64{1, 2, 3, 4, 5, 7, 8, 9}, "forward iterator from 1")
+	verifyIterator(t, db.ReverseIterator(int642Bytes(10), nil), []int64{9, 8, 7, 5, 4, 3, 2, 1, 0}, "reverse iterator from 10")
+	verifyIterator(t, db.ReverseIterator(int642Bytes(9), nil), []int64{9, 8, 7, 5, 4, 3, 2, 1, 0}, "reverse iterator from 9")
+	verifyIterator(t, db.ReverseIterator(int642Bytes(8), nil), []int64{8, 7, 5, 4, 3, 2, 1, 0}, "reverse iterator from 8")
+
+	verifyIterator(t, db.Iterator(int642Bytes(5), int642Bytes(6)), []int64{5}, "forward iterator from 5 to 6")
+	verifyIterator(t, db.Iterator(int642Bytes(5), int642Bytes(7)), []int64{5}, "forward iterator from 5 to 7")
+	verifyIterator(t, db.Iterator(int642Bytes(5), int642Bytes(8)), []int64{5, 7}, "forward iterator from 5 to 8")
+	verifyIterator(t, db.Iterator(int642Bytes(6), int642Bytes(7)), []int64(nil), "forward iterator from 6 to 7")
+	verifyIterator(t, db.Iterator(int642Bytes(6), int642Bytes(8)), []int64{7}, "forward iterator from 6 to 8")
+	verifyIterator(t, db.Iterator(int642Bytes(7), int642Bytes(8)), []int64{7}, "forward iterator from 7 to 8")
+
+	verifyIterator(t, db.ReverseIterator(int642Bytes(5), int642Bytes(4)), []int64{5}, "reverse iterator from 5 to 4")
+	verifyIterator(t, db.ReverseIterator(int642Bytes(6), int642Bytes(4)), []int64{5}, "reverse iterator from 6 to 4")
+	verifyIterator(t, db.ReverseIterator(int642Bytes(7), int642Bytes(4)), []int64{7, 5}, "reverse iterator from 7 to 4")
+	verifyIterator(t, db.ReverseIterator(int642Bytes(6), int642Bytes(5)), []int64(nil), "reverse iterator from 6 to 5")
+	verifyIterator(t, db.ReverseIterator(int642Bytes(7), int642Bytes(5)), []int64{7}, "reverse iterator from 7 to 5")
+	verifyIterator(t, db.ReverseIterator(int642Bytes(7), int642Bytes(6)), []int64{7}, "reverse iterator from 7 to 6")
 
 	verifyIterator(t, db.Iterator(int642Bytes(0), int642Bytes(1)), []int64{0}, "forward iterator from 0 to 1")
 	verifyIterator(t, db.ReverseIterator(int642Bytes(9), int642Bytes(8)), []int64{9}, "reverse iterator from 9 to 8")
