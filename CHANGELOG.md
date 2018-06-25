@@ -20,6 +20,7 @@ FEATURES:
    functions
  - [common] ColoredBytes([]byte) string for printing mixed ascii and bytes
  - [db] DebugDB uses ColoredBytes()
+ - [db] ReverseIterator implementation and tests
 
 ## 0.8.4
 
